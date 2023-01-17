@@ -1,6 +1,6 @@
 import { appDataSource } from "@config/data-source"
 import { Notification, NotificationTypes } from "@entities/Notification"
-import { Auth, ListQueryParams, ListResponse } from "@types/index.types"
+import { Auth, ListQueryParams, ListResponse } from "@interfaces/index.interfaces"
 import { paginateMeta } from "@utils/paginateMeta"
 import BadRequestException from "@exceptions/BadRequestException"
 import isEmpty from "is-empty"

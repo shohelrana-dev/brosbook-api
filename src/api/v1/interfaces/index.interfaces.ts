@@ -17,22 +17,6 @@ export interface LoginTokenPayload {
     message?: string
 }
 
-export interface MessageDataDto {
-    senderId: number
-    participantId: number
-    conversationIdentifier: string
-    body?: string
-    type: 'text' | 'image' | 'emoji'
-    base64Image?: string
-    imageName?: string
-}
-
-export interface ReactionDataDto {
-    senderId: number
-    name: string
-    messageId: number
-}
-
 export interface PaginateMeta {
     count: number,
     currentPage: number,

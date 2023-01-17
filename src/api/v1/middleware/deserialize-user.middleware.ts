@@ -1,7 +1,7 @@
 import User from '@entities/User'
 import {NextFunction, Request, Response} from 'express'
 import jwt from 'jsonwebtoken'
-import {Auth} from "@types/index.types"
+import {Auth} from "@interfaces/index.interfaces"
 
 export default async function deserializeUserMiddleware(req: Request, _: Response, next: NextFunction) {
     let jwt_token = ''

@@ -1,4 +1,4 @@
-import { PaginateMeta } from "@types/index.types"
+import { PaginateMeta } from "@interfaces/index.interfaces"
 
 export function paginateMeta( total: number, page: number, limit: number ): PaginateMeta {
     //parse to number

@@ -6,7 +6,7 @@ import UnprocessableEntityException                               from "@excepti
 import { ChangePasswordDTO, ChangeUsernameDTO, UpdateProfileDTO } from "@modules/account/account.dto"
 import isEmpty                                                    from "is-empty"
 import UserService                                                from "@modules/users/user.service"
-import { Auth }                                                   from "@types/index.types"
+import { Auth }                                                   from "@interfaces/index.interfaces"
 import { selectAllColumns }                                       from "@utils/selectAllColumns"
 
 export default class AccountService {

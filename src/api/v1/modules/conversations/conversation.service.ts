@@ -1,4 +1,4 @@
-import { Auth, ListQueryParams, ListResponse } from "@types/index.types"
+import { Auth, ListQueryParams, ListResponse } from "@interfaces/index.interfaces"
 import Conversation from "@entities/Conversation"
 import conversation from "@entities/Conversation"
 import BadRequestException from "@exceptions/BadRequestException"

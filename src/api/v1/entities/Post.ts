@@ -10,7 +10,7 @@ import User               from "./User"
 import PostLike           from "./PostLike"
 import { AbstractEntity } from "@entities/AbstractEntity"
 import Media              from "@entities/Media"
-import { Auth }           from "@types/index.types"
+import { Auth }           from "@interfaces/index.interfaces"
 
 @Entity( 'posts' )
 export default class Post extends AbstractEntity {

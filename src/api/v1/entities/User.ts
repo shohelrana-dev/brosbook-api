@@ -10,7 +10,7 @@ import argon2             from 'argon2'
 import Profile            from "./Profile"
 import { AbstractEntity } from "@entities/AbstractEntity"
 import Media              from "@entities/Media"
-import { Auth }           from "@types/index.types"
+import { Auth }           from "@interfaces/index.interfaces"
 import Relationship       from "@entities/Relationship"
 
 @Entity( 'users' )

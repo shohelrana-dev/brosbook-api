@@ -9,7 +9,7 @@ import Post               from "./Post"
 import User               from "./User"
 import PostLike           from "./PostLike"
 import CommentLike        from "@entities/CommentLike"
-import { Auth }           from "@types/index.types"
+import { Auth }           from "@interfaces/index.interfaces"
 
 @Entity( 'comments' )
 export default class Comment extends AbstractEntity {

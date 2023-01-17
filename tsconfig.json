@@ -27,7 +27,7 @@
       "noFallthroughCasesInSwitch": true,
       "resolveJsonModule": true,
       "typeRoots": [
-         "src/api/v1/v1/types",
+         "src/api/v1/interfaces",
          "node_modules/@types"
       ],
       "allowJs": false,
@@ -37,6 +37,7 @@
       "paths": {
          "@config/*": ["config/*"],
          "@startup/*": ["startup/*"],
+         "@interfaces/*": ["api/v1/interfaces/*"],
          "@modules/*": ["api/v1/modules/*"],
          "@services/*": ["api/v1/services/*"],
          "@exceptions/*": ["api/v1/exceptions/*"],

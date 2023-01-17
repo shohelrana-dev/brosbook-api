@@ -3,7 +3,7 @@ import jwt     from "jsonwebtoken"
 import isEmpty from "is-empty"
 
 import User                               from "@entities/User"
-import { LoginTokenPayload }              from "@types/index.types"
+import { LoginTokenPayload }              from "@interfaces/index.interfaces"
 import { LoginUserDTO, ResetPasswordDTO } from "@modules/auth/auth.dto"
 import BadRequestException                from "@exceptions/BadRequestException"
 import { CreateUserDTO }                  from "@modules/auth/auth.dto"
