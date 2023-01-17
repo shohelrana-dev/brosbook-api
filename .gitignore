@@ -1,0 +1,7 @@
+/dist
+/public/uploads
+/node_modules
+
+.env
+yarn.lock
+yarn-error.log

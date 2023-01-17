@@ -1,0 +1,59 @@
+{
+   "compilerOptions": {
+      // https://www.typescriptlang.org/tsconfig
+      "lib": ["es2017"],
+      "target": "es2017",
+      "module": "commonjs",
+      "moduleResolution": "node",
+      "outDir": "dist",
+      "emitDecoratorMetadata": true,
+      "experimentalDecorators": true,
+      "sourceMap": true,
+      // Additions
+      "esModuleInterop": true,
+      // Strict stuff
+      // "strict": true,
+      "noImplicitAny": true,
+      "strictNullChecks": false,
+      "strictFunctionTypes": true,
+      "strictBindCallApply": true,
+      // "strictPropertyInitialization": true,
+      "noImplicitThis": true,
+      // Extra
+      "alwaysStrict": true,
+      "noUnusedLocals": false,
+      "noUnusedParameters": false,
+      "noImplicitReturns": false,
+      "noFallthroughCasesInSwitch": true,
+      "resolveJsonModule": true,
+      "typeRoots": [
+         "src/api/v1/v1/types",
+         "node_modules/@types"
+      ],
+      "allowJs": false,
+      "importHelpers": true,
+      "allowSyntheticDefaultImports": true,
+      "baseUrl": "./src",
+      "paths": {
+         "@config/*": ["config/*"],
+         "@startup/*": ["startup/*"],
+         "@modules/*": ["api/v1/modules/*"],
+         "@services/*": ["api/v1/services/*"],
+         "@exceptions/*": ["api/v1/exceptions/*"],
+         "@enums/*": ["api/v1/enums/*"],
+         "@entities/*": ["api/v1/entities/*"],
+         "@middleware/*": ["api/v1/middleware/*"],
+         "@utils/*": ["api/v1/utils/*"]
+      }
+   },
+   "include": [
+     "custom.d.ts",
+      "src/**/*.ts",
+      "src/**/*.json",
+     ".env"
+   ],
+   "exclude": [
+      "node_modules",
+      "dist"
+   ]
+}
