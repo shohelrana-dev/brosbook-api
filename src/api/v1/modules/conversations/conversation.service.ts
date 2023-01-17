@@ -161,11 +161,9 @@ export default class ConversationService {
         conversation.lastMessageId = message.id
         await this.repository.save( conversation )
 
-        const formattedMessage = this.formatMessage( message, auth )
+        io.emit( `new_message_${ conversation.id }`, message )
 
-        io.emit( `new_message_${ conversation.id }`, formattedMessage )
-
-        return formattedMessage
+        return message
     }
 
     public async sendReaction( reactionData: { messageId: string, name: string }, auth: Auth ): Promise<Message>{
@@ -202,11 +200,9 @@ export default class ConversationService {
 
         message.reactions = await this.reactionRepository.findBy( { messageId } )
 
-        const formattedMessage = this.formatMessage( message, auth )
+        io.emit( `new_reaction_${ message.conversation.id }`, message )
 
-        io.emit( `new_reaction_${ message.conversation.id }`, formattedMessage )
-
-        return formattedMessage
+        return message
     }
 
     public async getConversationMedia( conversationId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{

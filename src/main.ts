@@ -3,7 +3,7 @@ import { server }        from '@config/express'
 import { appDataSource } from "@config/data-source"
 
 //src run
-const PORT = process.env.SERVER_PORT || 4000;
+const PORT = process.env.PORT || 4000;
 server.listen( PORT, async() => {
     console.log( `🚀 Server listening on port ${ PORT }` )
     console.log( `======= ENV: ${ process.env.NODE_ENV } =======` )
