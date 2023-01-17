@@ -24,14 +24,13 @@ export default class CommentService {
         const limit = params.limit || 5
         const skip  = limit * ( page - 1 )
 
-        const [comments, count] = await this.repository
-            .createQueryBuilder( 'comment' )
-            .leftJoinAndSelect( 'comment.author', 'author' )
-            .where( 'comment.postId = :postId', { postId } )
-            .orderBy( 'comment.createdAt', 'DESC' )
-            .skip( skip )
-            .take( limit )
-            .getManyAndCount()
+        const [comments, count] = await this.repository.findAndCount( {
+            where: { post: { id: postId } },
+            order: { createdAt: 'DESC' },
+            take: limit,
+            skip
+        } )
+
 
         const formattedComments = await Promise.all( comments.map( ( comment ) => comment.setViewerProperties( auth ) ) )
 

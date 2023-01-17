@@ -53,8 +53,6 @@ class User extends AbstractEntity {
     fullName: string
     isViewerFollow: boolean
     hasEmailVerified: boolean
-    followersCount: number
-    followingsCount: number
 
     @BeforeInsert()
     async makePasswordHash(){
