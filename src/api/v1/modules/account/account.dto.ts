@@ -50,7 +50,7 @@ export class UpdateProfileDTO {
     @IsNotEmpty()
     birthdate: string
 
-    @IsEnum(['male', 'email'])
+    @IsEnum(['male', 'female'])
     @IsNotEmpty()
     gender: string
 }

@@ -24,7 +24,7 @@ export default class MediaService {
         const name         = process.env.APP_NAME + '_image_' + uuidv4() + extname
         const originalName = file.name
         const url          = `${ process.env.SERVER_URL }/uploads/${ name }`
-        const uploadPath   = path.join( process.cwd(), 'public/uploads', name )
+        const uploadPath   = path.resolve( process.cwd(), 'public/uploads', name )
 
         await file.mv( uploadPath )
 

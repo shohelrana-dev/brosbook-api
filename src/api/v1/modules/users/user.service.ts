@@ -92,12 +92,10 @@ export default class UserService {
     }
 
     public async getCurrentUser( auth: Auth ){
-        const user = await this.repository.findOneOrFail( {
+        return await this.repository.findOneOrFail( {
             where: { id: auth.user.id },
             relations: { profile: true }
         } )
-
-        return user
     }
 
     public async getUserById( userId: string, auth: Auth ): Promise<User>{
@@ -186,6 +184,7 @@ export default class UserService {
             .leftJoin( 'user.followings', 'following' )
             .leftJoin( 'user.followers', 'follower' )
             .leftJoinAndSelect( 'user.avatar', 'avatar' )
+            .leftJoinAndSelect( 'user.profile', 'profile' )
             .where( 'user.id != :userId', { userId: auth.user.id } )
             .andWhere( 'user.id NOT IN (:...userIds)', { userIds: currentUserFollowingIds } )
             .orderBy( 'user.createdAt', 'DESC' )
@@ -211,6 +210,8 @@ export default class UserService {
             .leftJoin( 'relationship.following', 'following' )
             .leftJoinAndSelect( 'follower.avatar', 'followerAvatar' )
             .leftJoinAndSelect( 'following.avatar', 'followingAvatar' )
+            .leftJoinAndSelect( 'follower.profile', 'followerProfile' )
+            .leftJoinAndSelect( 'following.profile', 'followingProfile' )
             .where( 'following.id = :followingId', { followingId: userId } )
             .select( 'relationship.id' )
             .addSelect( 'follower' )
@@ -240,6 +241,8 @@ export default class UserService {
             .leftJoin( 'relationship.follower', 'follower' )
             .leftJoinAndSelect( 'follower.avatar', 'followerAvatar' )
             .leftJoinAndSelect( 'following.avatar', 'followingAvatar' )
+            .leftJoinAndSelect( 'follower.profile', 'followerProfile' )
+            .leftJoinAndSelect( 'following.profile', 'followingProfile' )
             .where( 'follower.id = :followerId', { followerId: userId } )
             .select( 'relationship.id' )
             .addSelect( 'following' )
