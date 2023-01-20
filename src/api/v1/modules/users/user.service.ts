@@ -141,7 +141,7 @@ export default class UserService {
     }
 
     public async searchUsers( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>>{
-        const query = params.query
+        const key = params.key
         const page  = params.page || 1
         const limit = params.limit || 16
         const skip  = limit * ( page - 1 )
@@ -149,8 +149,8 @@ export default class UserService {
         const [users, count] = await this.repository
             .createQueryBuilder( 'user' )
             .leftJoinAndSelect( 'user.avatar', 'avatar' )
-            .where( 'user.firstName LIKE :query', { query: `%${ query }%` } )
-            .where( 'user.lastName LIKE :query', { query: `%${ query }%` } )
+            .where( 'user.firstName LIKE :key', { key: `%${ key }%` } )
+            .where( 'user.lastName LIKE :key', { key: `%${ key }%` } )
             .andWhere( 'user.id != :id', { id: auth.user.id } )
             .orderBy( 'user.createdAt', 'DESC' )
             .skip( skip )

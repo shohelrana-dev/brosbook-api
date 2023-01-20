@@ -35,7 +35,7 @@ export interface ListQueryParams {
 }
 
 export interface SearchQueryParams {
-    query: string
+    key: string
     page?: number
     limit?: number
 }
