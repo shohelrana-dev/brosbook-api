@@ -1,12 +1,13 @@
-import fs                from "fs"
-import Media             from "@entities/Media"
-import { UploadedFile }  from "express-fileupload"
-import path              from "path"
-import { v4 as uuidv4 }  from "uuid"
-import isEmpty           from "is-empty"
-import { MediaSource }   from "@entities/Media"
-import User              from "@entities/User"
+import fs from "fs"
+import Media from "@entities/Media"
+import { UploadedFile } from "express-fileupload"
+import path from "path"
+import { v4 as uuidv4 } from "uuid"
+import isEmpty from "is-empty"
+import { MediaSource } from "@entities/Media"
+import User from "@entities/User"
 import { appDataSource } from "@config/data-source"
+import appRootPath from "app-root-path"
 
 interface SaveMedia {
     file: UploadedFile
@@ -20,13 +21,18 @@ export default class MediaService {
     async save( { file, creator, source }: SaveMedia ): Promise<Media>{
         if( isEmpty( file ) ) throw new Error( 'File is empty.' )
 
-        const extname      = path.extname( file.name )
-        const name         = process.env.APP_NAME + '_image_' + uuidv4() + extname
-        const originalName = file.name
-        const url          = `${ process.env.SERVER_URL }/uploads/${ name }`
-        const uploadPath   = path.resolve( process.cwd(), 'public/uploads', name )
+        const extname        = path.extname( file.name )
+        const name           = process.env.APP_NAME + '_image_' + uuidv4() + extname
+        const originalName   = file.name
+        const url            = `${ process.env.SERVER_URL }/uploads/${ name }`
+        const uploadPath     = appRootPath.resolve( '/public/uploads' )
+        const uploadFilePath = path.resolve( uploadPath, name )
 
-        await file.mv( uploadPath )
+        if( ! fs.existsSync( uploadPath ) ){
+            fs.mkdirSync( uploadPath )
+        }
+
+        await file.mv( uploadFilePath )
 
         const media        = new Media()
         media.url          = url
@@ -47,9 +53,9 @@ export default class MediaService {
 
         if( ! media ) throw new Error( 'Media doesn\'t exists.' )
 
-        const uploadPath = path.join( process.cwd(), 'public/uploads', media.name )
+        const filePath = appRootPath.resolve( `/public/uploads/${ media.name }` )
 
-        fs.unlinkSync( uploadPath )
+        fs.unlinkSync( filePath )
 
         await this.repository.delete( { id: mediaId } )
 

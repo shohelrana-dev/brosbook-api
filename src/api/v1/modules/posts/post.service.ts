@@ -70,9 +70,13 @@ export default class PostService {
 
         if( ! post ) throw new NotFoundException( 'Post doesn\'t exists.' )
 
-        await post.remove()
+        await this.repository.delete( { id: post.id } )
 
         await appDataSource.getRepository( Comment ).delete( { post: { id: post.id } } )
+
+        if( post.image ){
+            this.mediaService.delete( post.image.id )
+        }
 
         return post
     }
