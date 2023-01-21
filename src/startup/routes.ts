@@ -10,11 +10,11 @@ import notificationRoutes from "@modules/notifications/notification.routes"
 const router = Router()
 
 //base routes
-router.use( '/v1/auth', authRoutes )
-router.use( '/v1/account', accountRoutes )
-router.use( '/v1/users', userRoutes )
-router.use( '/v1/posts', [postRoutes, commentRoutes] )
-router.use( '/v1/conversations', conversationRoutes )
-router.use( '/v1/notifications', notificationRoutes )
+router.use( '/api/v1/auth', authRoutes )
+router.use( '/api/v1/account', accountRoutes )
+router.use( '/api/v1/users', userRoutes )
+router.use( '/api/v1/posts', [postRoutes, commentRoutes] )
+router.use( '/api/v1/conversations', conversationRoutes )
+router.use( '/api/v1/notifications', notificationRoutes )
 
 export default router
