@@ -21,7 +21,7 @@ export default class PostController {
 
     public getPostById = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
         try {
-            const post = await this.postService.getPostById( req.params.id, req.auth )
+            const post = await this.postService.getPostById( req.params.postId, req.auth )
 
             res.json( post )
         } catch ( err ) {
@@ -31,7 +31,7 @@ export default class PostController {
 
     public delete = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
         try {
-            const post = await this.postService.delete( req.params.id )
+            const post = await this.postService.delete( req.params.postId )
 
             res.json( post )
         } catch ( err ) {

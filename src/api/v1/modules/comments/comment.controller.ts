@@ -30,7 +30,7 @@ export default class CommentController {
 
     public delete = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
         try {
-            const comment = await this.commentService.delete( req.params.commentId )
+            const comment = await this.commentService.delete( req.params.commentId, req.auth )
 
             res.json( comment )
         } catch ( err ) {

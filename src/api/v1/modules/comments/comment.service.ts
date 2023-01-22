@@ -10,6 +10,7 @@ import PostService from "@modules/posts/post.service"
 import CommentLike from "@entities/CommentLike"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification";
+import ForbiddenException from "@exceptions/ForbiddenException";
 
 export default class CommentService {
     public readonly repository          = appDataSource.getRepository( Comment )
@@ -67,12 +68,19 @@ export default class CommentService {
         return comment
     }
 
-    public async delete( commentId: string ): Promise<Comment>{
+    public async delete( commentId: string, auth: Auth ): Promise<Comment>{
         if( ! commentId ) throw new BadRequestException( "Comment id is empty." )
 
-        const comment = await this.repository.findOneBy( { id: commentId } )
+        const comment = await this.repository.findOne( {
+            where: { id: commentId },
+            relations: { post: true }
+        } )
 
         if( ! comment ) throw new NotFoundException( 'comment doesn\'t exists.' )
+
+        if( auth.user.id !== comment.author.id && auth.user.id !== comment.post.author.id ){
+            throw new ForbiddenException( 'You are not owner of the post or comment.' )
+        }
 
         await this.repository.delete( { id: comment.id } )
 
