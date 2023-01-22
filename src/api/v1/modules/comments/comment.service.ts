@@ -54,7 +54,7 @@ export default class CommentService {
         comment.post   = post
         await this.repository.save( comment )
 
-        this.updatePostCommentsCount( post )
+        this.updatePostCommentsCount( post.id )
 
         this.notificationService.create( {
             initiatorId: auth.user.id,
@@ -74,7 +74,9 @@ export default class CommentService {
 
         if( ! comment ) throw new NotFoundException( 'comment doesn\'t exists.' )
 
-        await comment.remove()
+        await this.repository.delete( { id: comment.id } )
+
+        this.updatePostCommentsCount( comment.postId )
 
         return comment
     }
@@ -94,7 +96,7 @@ export default class CommentService {
         like.user    = auth.user as User
         await this.likeRepository.save( like )
 
-        this.updateCommentLikesCount( comment )
+        this.updateCommentLikesCount( comment.id )
 
         comment.isViewerLiked = true
         comment.likesCount    = Number( comment.likesCount ) + 1
@@ -119,7 +121,7 @@ export default class CommentService {
 
         await this.likeRepository.delete( { comment: { id: comment.id } } )
 
-        this.updateCommentLikesCount( comment )
+        this.updateCommentLikesCount( comment.id )
 
         comment.isViewerLiked = false
         comment.likesCount    = Number( comment.likesCount ) - 1
@@ -127,15 +129,15 @@ export default class CommentService {
         return comment
     }
 
-    private updateCommentLikesCount( comment: Comment ){
-        this.likeRepository.countBy( { comment: { id: comment.id } } ).then( ( count ) => {
-            this.repository.update( { id: comment.id }, { likesCount: count } )
+    private updateCommentLikesCount( commentId: string ){
+        this.likeRepository.countBy( { comment: { id: commentId } } ).then( ( count ) => {
+            this.repository.update( { id: commentId }, { likesCount: count } )
         } )
     }
 
-    private updatePostCommentsCount( post: Post ){
-        this.repository.countBy( { post: { id: post.id } } ).then( ( count ) => {
-            this.postService.repository.update( { id: post.id }, { commentsCount: count } )
+    private updatePostCommentsCount( postId: string ){
+        this.repository.countBy( { post: { id: postId } } ).then( ( count ) => {
+            this.postService.repository.update( { id: postId }, { commentsCount: count } )
         } )
     }
 }

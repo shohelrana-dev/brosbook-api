@@ -21,6 +21,13 @@ router.get( '/:postId/comments/', authMiddleware, commentController.getMany )
  */
 router.post( '/:postId/comments/', authMiddleware, commentController.create )
 
+/**
+ * @desc delete comment
+ * @route DELETE /posts/:postId/comments/:commentId
+ * @access Private
+ */
+router.delete( '/:postId/comments/:commentId', authMiddleware, commentController.delete )
+
 
 /**
  * @desc save comment like

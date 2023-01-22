@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express"
-import CommentService                      from "./comment.service"
+import CommentService from "./comment.service"
 
 export default class CommentController {
     constructor( private readonly commentService: CommentService ){
@@ -17,9 +17,22 @@ export default class CommentController {
 
     public create = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
         try {
-            const comment = await this.commentService.create( {postId: req.params.postId, body: req.body.body}, req.auth )
+            const comment = await this.commentService.create( {
+                postId: req.params.postId,
+                body: req.body.body
+            }, req.auth )
 
             res.status( 201 ).json( comment )
+        } catch ( err ) {
+            next( err )
+        }
+    }
+
+    public delete = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
+        try {
+            const comment = await this.commentService.delete( req.params.commentId )
+
+            res.json( comment )
         } catch ( err ) {
             next( err )
         }

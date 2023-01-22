@@ -2,17 +2,20 @@ import {
     Entity,
     Column,
     ManyToOne,
-    OneToMany
-}                         from "typeorm"
+    OneToMany, JoinColumn
+} from "typeorm"
 import { AbstractEntity } from "./AbstractEntity"
-import Post               from "./Post"
-import User               from "./User"
-import PostLike           from "./PostLike"
-import CommentLike        from "@entities/CommentLike"
-import { Auth }           from "@interfaces/index.interfaces"
+import Post from "./Post"
+import User from "./User"
+import PostLike from "./PostLike"
+import CommentLike from "@entities/CommentLike"
+import { Auth } from "@interfaces/index.interfaces"
 
 @Entity( 'comments' )
 export default class Comment extends AbstractEntity {
+    @Column( { nullable: false } )
+    postId: string
+
     @Column( { type: 'text', nullable: true } )
     body: string
 
@@ -23,6 +26,7 @@ export default class Comment extends AbstractEntity {
     author: User
 
     @ManyToOne( () => Post )
+    @JoinColumn( { name: 'postId', referencedColumnName: 'id' } )
     post: Post
 
     @OneToMany( () => CommentLike, like => like.comment )
