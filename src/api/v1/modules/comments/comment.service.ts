@@ -82,6 +82,8 @@ export default class CommentService {
             throw new ForbiddenException( 'You are not owner of the post or comment.' )
         }
 
+        await this.notificationService.deleteByCommentId(commentId, auth)
+
         await this.repository.delete( { id: comment.id } )
 
         this.updatePostCommentsCount( comment.postId )
