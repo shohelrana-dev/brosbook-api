@@ -9,7 +9,7 @@ export default class CommentLike extends AbstractEntity {
     @ManyToOne( () => User )
     user: User
 
-    @ManyToOne( () => Comment )
+    @ManyToOne( () => Comment, {onDelete: "CASCADE"} )
     comment: Comment
 
     @AfterInsert()

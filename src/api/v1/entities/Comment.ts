@@ -25,7 +25,7 @@ export default class Comment extends AbstractEntity {
     @ManyToOne( () => User, { eager: true } )
     author: User
 
-    @ManyToOne( () => Post )
+    @ManyToOne( () => Post, {onDelete: "CASCADE"} )
     @JoinColumn( { name: 'postId', referencedColumnName: 'id' } )
     post: Post
 

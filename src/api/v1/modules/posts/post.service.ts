@@ -71,8 +71,6 @@ export default class PostService {
 
         if( ! post ) throw new NotFoundException( 'Post doesn\'t exists.' )
 
-        await this.likeRepository.delete( { post: { id: post.id } } )
-        await this.commentRepository.delete( { post: { id: post.id } } )
         await this.repository.delete( { id: post.id } )
 
         if( post.image ){

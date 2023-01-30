@@ -27,7 +27,7 @@ class Message extends AbstractEntity {
     @Column( { type: 'datetime', nullable: true } )
     seenAt: Date
 
-    @ManyToOne( () => Conversation, conversation => conversation.messages, { eager: true } )
+    @ManyToOne( () => Conversation, conversation => conversation.messages, { eager: true, onDelete: "CASCADE" } )
     @JoinColumn()
     conversation: Conversation
 

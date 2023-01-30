@@ -16,10 +16,10 @@ export class Notification extends AbstractEntity {
     @Column( { type: 'enum', enum: NotificationTypes, nullable: false } )
     type: NotificationTypes
 
-    @ManyToOne( () => Post )
+    @ManyToOne( () => Post, {onDelete: "CASCADE"} )
     post: Post
 
-    @ManyToOne( () => Comment )
+    @ManyToOne( () => Comment, {onDelete: "CASCADE"} )
     comment: Comment
 
     @Column( { type: 'datetime', nullable: true } )

@@ -28,7 +28,7 @@ class Profile extends AbstractEntity {
     @Column( { type: 'datetime', nullable: true } )
     birthdate: string
 
-    @OneToOne( () => User )
+    @OneToOne( () => User, {onDelete: "CASCADE"} )
     @JoinColumn( { name: 'userId' } )
     user: User
 }
