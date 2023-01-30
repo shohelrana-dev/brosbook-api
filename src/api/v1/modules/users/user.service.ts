@@ -16,6 +16,7 @@ import UnauthorizedException from "@exceptions/UnauthorizedException"
 import { v4 as uuid } from "uuid"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
+import { Brackets } from "typeorm";
 
 
 export default class UserService {
@@ -141,7 +142,7 @@ export default class UserService {
     }
 
     public async searchUsers( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>>{
-        const key = params.key
+        const key   = params.key
         const page  = params.page || 1
         const limit = params.limit || 16
         const skip  = limit * ( page - 1 )
@@ -149,9 +150,11 @@ export default class UserService {
         const [users, count] = await this.repository
             .createQueryBuilder( 'user' )
             .leftJoinAndSelect( 'user.avatar', 'avatar' )
-            .where( 'user.firstName LIKE :key', { key: `%${ key }%` } )
-            .where( 'user.lastName LIKE :key', { key: `%${ key }%` } )
-            .andWhere( 'user.id != :id', { id: auth.user.id } )
+            .where( 'user.id != :userId', { userId: auth.user.id } )
+            .andWhere( new Brackets( ( qb ) => {
+                qb.where( 'user.firstName LIKE :key', { key: `%${ key }%` } )
+                qb.orWhere( 'user.lastName LIKE :key', { key: `%${ key }%` } )
+            } ) )
             .orderBy( 'user.createdAt', 'DESC' )
             .skip( skip )
             .take( limit )
