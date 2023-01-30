@@ -8,7 +8,7 @@ const validationMiddleware = (type: any): RequestHandler => async (req, res, nex
     const errors = await validate(plainToInstance(type, req.body))
 
     if(errors.length > 0){
-       return next(new UnprocessableEntityException('Validation error',   mapErrors(errors)))
+       return next(new UnprocessableEntityException('Please fix errors below.',   mapErrors(errors)))
     }
     next()
 }
