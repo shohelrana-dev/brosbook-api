@@ -18,6 +18,7 @@ import { NotificationTypes } from "@entities/Notification";
 export default class PostService {
     public readonly repository          = appDataSource.getRepository( Post )
     public readonly likeRepository      = appDataSource.getRepository( PostLike )
+    public readonly commentRepository      = appDataSource.getRepository( Comment )
     public readonly mediaService        = new MediaService()
     public readonly notificationService = new NotificationService()
 
@@ -70,9 +71,9 @@ export default class PostService {
 
         if( ! post ) throw new NotFoundException( 'Post doesn\'t exists.' )
 
+        await this.likeRepository.delete( { post: { id: post.id } } )
+        await this.commentRepository.delete( { post: { id: post.id } } )
         await this.repository.delete( { id: post.id } )
-
-        await appDataSource.getRepository( Comment ).delete( { post: { id: post.id } } )
 
         if( post.image ){
             this.mediaService.delete( post.image.id )
