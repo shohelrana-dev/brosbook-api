@@ -83,30 +83,4 @@ export default class NotificationService {
 
         return notification
     }
-
-    async deleteByPostId( postId: string, auth: Auth ): Promise<Notification>{
-        const notification = await this.repository
-            .createQueryBuilder( 'notification' )
-            .where( 'notification.post.id = :postId', { postId } )
-            .andWhere( 'notification.initiator.id = :initiatorId', { initiatorId: auth.user.id } )
-            .orWhere( 'notification.recipient.id = :recipientId', { recipientId: auth.user.id } )
-            .getOne()
-
-        if( notification ) await this.repository.delete( notification.id )
-
-        return notification
-    }
-
-    async deleteByCommentId( commentId: string, auth: Auth ): Promise<Notification>{
-        const notification = await this.repository
-            .createQueryBuilder( 'notification' )
-            .where( 'notification.comment.id = :commentId', { commentId } )
-            .andWhere( 'notification.initiator.id = :initiatorId', { initiatorId: auth.user.id } )
-            .orWhere( 'notification.recipient.id = :recipientId', { recipientId: auth.user.id } )
-            .getOne()
-
-        if( notification ) await this.repository.delete( notification.id )
-
-        return notification
-    }
 }

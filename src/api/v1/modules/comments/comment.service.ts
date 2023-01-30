@@ -4,13 +4,12 @@ import { Auth, ListResponse, ListQueryParams } from "@interfaces/index.interface
 import User from "@entities/User"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"
-import Post from "@entities/Post"
 import { appDataSource } from "@config/data-source"
 import PostService from "@modules/posts/post.service"
 import CommentLike from "@entities/CommentLike"
 import NotificationService from "@modules/notifications/notification.service"
-import { NotificationTypes } from "@entities/Notification";
-import ForbiddenException from "@exceptions/ForbiddenException";
+import { NotificationTypes } from "@entities/Notification"
+import ForbiddenException from "@exceptions/ForbiddenException"
 
 export default class CommentService {
     public readonly repository          = appDataSource.getRepository( Comment )
@@ -79,10 +78,8 @@ export default class CommentService {
         if( ! comment ) throw new NotFoundException( 'comment doesn\'t exists.' )
 
         if( auth.user.id !== comment.author.id && auth.user.id !== comment.post.author.id ){
-            throw new ForbiddenException( 'You are not owner of the post or comment.' )
+            throw new ForbiddenException( 'You are not owner of the comment.' )
         }
-
-        await this.notificationService.deleteByCommentId(commentId, auth)
 
         await this.repository.delete( { id: comment.id } )
 
