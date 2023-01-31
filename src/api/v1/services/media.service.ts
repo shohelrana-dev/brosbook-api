@@ -1,13 +1,16 @@
-import fs from "fs"
 import Media from "@entities/Media"
 import { UploadedFile } from "express-fileupload"
-import path from "path"
-import { v4 as uuidv4 } from "uuid"
 import isEmpty from "is-empty"
 import { MediaSource } from "@entities/Media"
 import User from "@entities/User"
 import { appDataSource } from "@config/data-source"
-import appRootPath from "app-root-path"
+import { v2 as cloudinary } from "cloudinary"
+
+cloudinary.config( {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+} )
 
 interface SaveMedia {
     file: UploadedFile
@@ -21,29 +24,32 @@ export default class MediaService {
     async save( { file, creator, source }: SaveMedia ): Promise<Media>{
         if( isEmpty( file ) ) throw new Error( 'File is empty.' )
 
-        const extname        = path.extname( file.name )
-        const name           = process.env.APP_NAME + '_image_' + uuidv4() + extname
-        const originalName   = file.name
-        const url            = `${ process.env.SERVER_URL }/uploads/${ name }`
-        const uploadPath     = appRootPath.resolve( '/public/uploads' )
-        const uploadFilePath = path.resolve( uploadPath, name )
+        return new Promise( ( resolve, reject ) => {
+            cloudinary.uploader.upload_stream( {
+                resource_type: "image",
+                folder: "brosbook",
+                quality: 'auto:low',
+                width: 1920,
+                crop: "limit"
+            }, async( err, result ) => {
+                if( err ) reject( err )
+                console.log( result )
 
-        if( ! fs.existsSync( uploadPath ) ){
-            fs.mkdirSync( uploadPath )
-        }
+                const media        = new Media()
+                media.url          = result.secure_url
+                media.format       = result.format
+                media.name         = result.public_id
+                media.originalName = file.name
+                media.width        = result.width
+                media.height       = result.height
+                media.size         = result.bytes
+                media.source       = source
+                media.creator      = creator as User
+                await this.repository.save( media )
 
-        await file.mv( uploadFilePath )
-
-        const media        = new Media()
-        media.url          = url
-        media.mimetype     = file.mimetype
-        media.name         = name
-        media.originalName = originalName
-        media.source       = source
-        media.creator      = creator as User
-        await this.repository.save( media )
-
-        return media
+                resolve( media )
+            } ).end( file.data )
+        } )
     }
 
     async delete( mediaId: string ): Promise<Media>{
@@ -53,9 +59,7 @@ export default class MediaService {
 
         if( ! media ) throw new Error( 'Media doesn\'t exists.' )
 
-        const filePath = appRootPath.resolve( `/public/uploads/${ media.name }` )
-
-        fs.unlinkSync( filePath )
+        await cloudinary.uploader.destroy( media.name )
 
         await this.repository.delete( { id: mediaId } )
 
