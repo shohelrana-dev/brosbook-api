@@ -33,7 +33,6 @@ export default class MediaService {
                 crop: "limit"
             }, async( err, result ) => {
                 if( err ) reject( err )
-                console.log( result )
 
                 const media        = new Media()
                 media.url          = result.secure_url

@@ -73,7 +73,7 @@ export default class UserService {
         media.name         = uuid()
         media.originalName = 'Google photo'
         media.source       = MediaSource.AVATAR
-        media.mimetype     = 'image/jpeg'
+        media.format       = 'jpg'
         media.creator      = user
         media.url          = tokenPayload.picture
         await this.mediaService.repository.save( media )
