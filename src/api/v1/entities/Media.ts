@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne } from 'typeorm'
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm'
 import { AbstractEntity } from '@entities/AbstractEntity'
 import User from "@entities/User"
 
@@ -13,10 +13,10 @@ export enum MediaSource {
 @Entity( 'media' )
 export default class Media extends AbstractEntity {
     @Column( { nullable: false } )
-    name: string
+    creatorId: string
 
     @Column( { nullable: false } )
-    originalName: string
+    name: string
 
     @Column( { nullable: false } )
     url: string
@@ -24,10 +24,10 @@ export default class Media extends AbstractEntity {
     @Column( { nullable: false, length: 12 } )
     format: string
 
-    @Column( {type: "int", nullable: false} )
+    @Column( { type: "int", nullable: false } )
     width: number
 
-    @Column( {type: "int", nullable: false} )
+    @Column( { type: "int", nullable: false } )
     height: number
 
     @Column( { type: 'bigint', nullable: true } )
@@ -37,5 +37,6 @@ export default class Media extends AbstractEntity {
     source: MediaSource
 
     @ManyToOne( () => User )
+    @JoinColumn( { name: 'creatorId' } )
     creator: User
 }

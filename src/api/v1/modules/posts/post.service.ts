@@ -30,8 +30,8 @@ export default class PostService {
         if( image ){
             //save image
             const savedImage = await this.mediaService.save( {
-                file: image,
-                creator: auth.user,
+                file: image.data,
+                creatorId: auth.user.id,
                 source: MediaSource.POST
             } )
 

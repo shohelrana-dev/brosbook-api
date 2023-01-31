@@ -149,8 +149,8 @@ export default class ConversationService {
 
         if( image ){
             message.image = await this.mediaService.save( {
-                file: image,
-                creator: sender,
+                file: image.data,
+                creatorId: sender.id,
                 source: MediaSource.CONVERSATION
             } )
         } else{

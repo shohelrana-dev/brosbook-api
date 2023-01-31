@@ -5,7 +5,7 @@ import { paginateMeta } from "@utils/paginateMeta"
 import { appDataSource } from "@config/data-source"
 import { Auth, ListQueryParams, ListResponse, SearchQueryParams } from "@interfaces/index.interfaces"
 import BadRequestException from "@exceptions/BadRequestException"
-import Media, { MediaSource } from "@entities/Media"
+import { MediaSource } from "@entities/Media"
 import MediaService from "@services/media.service"
 import NotFoundException from "@exceptions/NotFoundException"
 import isEmpty from "is-empty"
@@ -16,7 +16,8 @@ import UnauthorizedException from "@exceptions/UnauthorizedException"
 import { v4 as uuid } from "uuid"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
-import { Brackets } from "typeorm";
+import { Brackets } from "typeorm"
+import fetch from "cross-fetch"
 
 
 export default class UserService {
@@ -68,24 +69,22 @@ export default class UserService {
 
         if( user ) return user
 
-        //save photo
-        let media          = new Media()
-        media.name         = uuid()
-        media.originalName = 'Google photo'
-        media.source       = MediaSource.AVATAR
-        media.format       = 'jpg'
-        media.creator      = user
-        media.url          = tokenPayload.picture
-        await this.mediaService.repository.save( media )
-
         //create user
         user           = new User()
         user.firstName = tokenPayload.given_name
         user.lastName  = tokenPayload.family_name
         user.email     = tokenPayload.email
-        user.avatar    = media
         user.password  = uuid()
         user           = await this.repository.save( user )
+
+        //save photo
+        user.avatar = await this.mediaService.save( {
+            file: Buffer.from( await ( await fetch( tokenPayload.picture ) ).arrayBuffer() ),
+            source: MediaSource.AVATAR,
+            creatorId: user.id
+        } )
+
+        await this.repository.save( user )
 
         await this.profileRepository.create( { user } ).save()
 
@@ -267,8 +266,8 @@ export default class UserService {
         const user = await this.repository.findOneBy( { id: auth.user.id } )
 
         user.avatar = await this.mediaService.save( {
-            file: avatar,
-            creator: auth.user,
+            file: avatar.data,
+            creatorId: auth.user.id,
             source: MediaSource.AVATAR
         } )
 
@@ -284,8 +283,8 @@ export default class UserService {
         if( ! user || ! profile ) throw new BadRequestException( "User does not exists." )
 
         profile.coverPhoto = await this.mediaService.save( {
-            file: coverPhoto,
-            creator: auth.user,
+            file: coverPhoto.data,
+            creatorId: auth.user.id,
             source: MediaSource.COVER_PHOTO
         } )
         await this.profileRepository.save( profile )

@@ -1,8 +1,6 @@
 import Media from "@entities/Media"
-import { UploadedFile } from "express-fileupload"
 import isEmpty from "is-empty"
 import { MediaSource } from "@entities/Media"
-import User from "@entities/User"
 import { appDataSource } from "@config/data-source"
 import { v2 as cloudinary } from "cloudinary"
 
@@ -13,15 +11,15 @@ cloudinary.config( {
 } )
 
 interface SaveMedia {
-    file: UploadedFile
-    creator: Partial<User>
+    file: Buffer
+    creatorId: string
     source: MediaSource
 }
 
 export default class MediaService {
     public readonly repository = appDataSource.getRepository( Media )
 
-    async save( { file, creator, source }: SaveMedia ): Promise<Media>{
+    async save( { file, creatorId, source }: SaveMedia ): Promise<Media>{
         if( isEmpty( file ) ) throw new Error( 'File is empty.' )
 
         return new Promise( ( resolve, reject ) => {
@@ -38,16 +36,15 @@ export default class MediaService {
                 media.url          = result.secure_url
                 media.format       = result.format
                 media.name         = result.public_id
-                media.originalName = file.name
                 media.width        = result.width
                 media.height       = result.height
                 media.size         = result.bytes
                 media.source       = source
-                media.creator      = creator as User
+                media.creatorId      = creatorId
                 await this.repository.save( media )
 
                 resolve( media )
-            } ).end( file.data )
+            } ).end( file )
         } )
     }
 
