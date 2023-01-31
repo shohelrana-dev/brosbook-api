@@ -17,7 +17,7 @@ import { v4 as uuid } from "uuid"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
 import { Brackets } from "typeorm"
-import fetch from "cross-fetch"
+import fetch from "node-fetch-commonjs"
 
 
 export default class UserService {
