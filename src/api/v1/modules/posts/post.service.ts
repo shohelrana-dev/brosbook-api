@@ -18,7 +18,7 @@ import { NotificationTypes } from "@entities/Notification";
 export default class PostService {
     public readonly repository          = appDataSource.getRepository( Post )
     public readonly likeRepository      = appDataSource.getRepository( PostLike )
-    public readonly commentRepository      = appDataSource.getRepository( Comment )
+    public readonly commentRepository   = appDataSource.getRepository( Comment )
     public readonly mediaService        = new MediaService()
     public readonly notificationService = new NotificationService()
 
@@ -133,6 +133,10 @@ export default class PostService {
 
 
     public async getFeedPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
+        if( ! auth.isAuthenticated ){
+            return this.getMany( params, auth )
+        }
+
         const page  = params.page || 1
         const limit = params.limit || 6
         const skip  = limit * ( page - 1 )

@@ -25,7 +25,7 @@ export default class Comment extends AbstractEntity {
     @ManyToOne( () => User, { eager: true } )
     author: User
 
-    @ManyToOne( () => Post, {onDelete: "CASCADE"} )
+    @ManyToOne( () => Post, { onDelete: "CASCADE" } )
     @JoinColumn( { name: 'postId', referencedColumnName: 'id' } )
     post: Post
 
@@ -36,9 +36,14 @@ export default class Comment extends AbstractEntity {
     isViewerLiked: boolean
 
     async setViewerProperties( auth: Auth ): Promise<Comment>{
-        const like = await CommentLike.findOneBy( { user: { id: auth.user.id }, comment: { id: this.id } } )
+        if( auth.isAuthenticated ){
+            const like = await CommentLike.findOneBy( { user: { id: auth.user.id }, comment: { id: this.id } } )
 
-        this.isViewerLiked = Boolean( like )
+            this.isViewerLiked = Boolean( like )
+        } else{
+            this.isViewerLiked = false
+        }
+
         if( this.author ){
             await this.author.setViewerProperties( auth )
         }

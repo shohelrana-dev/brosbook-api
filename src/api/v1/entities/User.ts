@@ -5,13 +5,13 @@ import {
     Entity,
     JoinColumn, OneToMany,
     OneToOne
-}                         from "typeorm"
-import argon2             from 'argon2'
-import Profile            from "./Profile"
+} from "typeorm"
+import argon2 from 'argon2'
+import Profile from "./Profile"
 import { AbstractEntity } from "@entities/AbstractEntity"
-import Media              from "@entities/Media"
-import { Auth }           from "@interfaces/index.interfaces"
-import Relationship       from "@entities/Relationship"
+import Media from "@entities/Media"
+import { Auth } from "@interfaces/index.interfaces"
+import Relationship from "@entities/Relationship"
 
 @Entity( 'users' )
 class User extends AbstractEntity {
@@ -30,7 +30,7 @@ class User extends AbstractEntity {
     @Column( { length: 100, nullable: false, select: false } )
     password: string
 
-    @OneToOne( () => Media, { eager: true} )
+    @OneToOne( () => Media, { eager: true } )
     @JoinColumn()
     avatar: Media
 
@@ -84,13 +84,17 @@ class User extends AbstractEntity {
         }
     }
 
-    async setViewerProperties( auth: Auth ):Promise<User>{
-        const relationship = await Relationship.findOneBy( {
-            follower: { id: auth.user.id },
-            following: { id: this.id }
-        } )
+    async setViewerProperties( auth: Auth ): Promise<User>{
+        if( auth.isAuthenticated ){
+            const relationship = await Relationship.findOneBy( {
+                follower: { id: auth.user.id },
+                following: { id: this.id }
+            } )
 
-        this.isViewerFollow = Boolean( relationship )
+            this.isViewerFollow = Boolean( relationship )
+        } else{
+            this.isViewerFollow = false
+        }
 
         return this
     }

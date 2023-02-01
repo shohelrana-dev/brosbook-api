@@ -4,13 +4,13 @@ import {
     OneToMany,
     ManyToOne,
     OneToOne, JoinColumn
-}                         from "typeorm"
-import Comment            from "./Comment"
-import User               from "./User"
-import PostLike           from "./PostLike"
+} from "typeorm"
+import Comment from "./Comment"
+import User from "./User"
+import PostLike from "./PostLike"
 import { AbstractEntity } from "@entities/AbstractEntity"
-import Media              from "@entities/Media"
-import { Auth }           from "@interfaces/index.interfaces"
+import Media from "@entities/Media"
+import { Auth } from "@interfaces/index.interfaces"
 
 @Entity( 'posts' )
 export default class Post extends AbstractEntity {
@@ -40,9 +40,14 @@ export default class Post extends AbstractEntity {
     isViewerLiked: boolean
 
     async setViewerProperties( auth: Auth ): Promise<Post>{
-        const like = await PostLike.findOneBy( { user: { id: auth.user.id }, post: { id: this.id } } )
+        if( auth.isAuthenticated ){
+            const like = await PostLike.findOneBy( { user: { id: auth.user.id }, post: { id: this.id } } )
 
-        this.isViewerLiked = Boolean( like )
+            this.isViewerLiked = Boolean( like )
+        } else{
+            this.isViewerLiked = false
+        }
+
         if( this.author ){
             await this.author.setViewerProperties( auth )
         }
