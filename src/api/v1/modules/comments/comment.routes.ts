@@ -12,7 +12,7 @@ const commentController = new CommentController( commentService )
  * @route GET /posts/:postId/comments
  * @access Private
  */
-router.get( '/:postId/comments/', authMiddleware, commentController.getMany )
+router.get( '/:postId/comments/', commentController.getMany )
 
 /**
  * @desc create comment
