@@ -15,11 +15,11 @@ const notificationController = new NotificationController( notificationService )
 router.get( '/', authMiddleware, notificationController.getMany )
 
 /**
- * @desc update all notifications
- * @route PUT /api/api/notifications
+ * @desc read all notifications
+ * @route PUT /api/api/notifications/read_all
  * @access Private
  */
-router.put( '/', authMiddleware, notificationController.updateAll )
+router.put( '/read_all', authMiddleware, notificationController.readAll )
 
 /**
  * @desc get notifications count
@@ -27,13 +27,6 @@ router.put( '/', authMiddleware, notificationController.updateAll )
  * @access Private
  */
 router.get( '/unread_count', authMiddleware, notificationController.getUnreadCount )
-
-/**
- * @desc update notification
- * @route GET /api/api/notifications/notificationId
- * @access Private
- */
-router.put( '/:notificationId', authMiddleware, notificationController.update )
 
 
 export default router

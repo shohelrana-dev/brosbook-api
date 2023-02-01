@@ -24,19 +24,9 @@ export default class NotificationController {
         }
     }
 
-    update = async( req: Request, res: Response, next: NextFunction ) => {
+    readAll = async( req: Request, res: Response, next: NextFunction ) => {
         try {
-            const notification = await this.notificationService.update( req.params.notificationId )
-
-            res.json( notification )
-        } catch ( err ) {
-            next( err )
-        }
-    }
-
-    updateAll = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            await this.notificationService.updateAll( req.auth )
+            await this.notificationService.readAll( req.auth )
 
             res.json()
         } catch ( err ) {

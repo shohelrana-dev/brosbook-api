@@ -49,7 +49,7 @@ export default class NotificationService {
         return notification
     }
 
-    async updateAll( auth: Auth ){
+    async readAll( auth: Auth ){
         await this.repository.update( {
             recipient: { id: auth.user.id },
             readAt: IsNull()
