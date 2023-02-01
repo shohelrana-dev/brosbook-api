@@ -11,14 +11,12 @@ import BadRequestException from "@exceptions/BadRequestException"
 import MediaService from "@services/media.service"
 import User from "@entities/User"
 import { appDataSource } from "@config/data-source"
-import Comment from "@entities/Comment"
 import NotificationService from "@modules/notifications/notification.service"
-import { NotificationTypes } from "@entities/Notification";
+import { NotificationTypes } from "@entities/Notification"
 
 export default class PostService {
     public readonly repository          = appDataSource.getRepository( Post )
     public readonly likeRepository      = appDataSource.getRepository( PostLike )
-    public readonly commentRepository   = appDataSource.getRepository( Comment )
     public readonly mediaService        = new MediaService()
     public readonly notificationService = new NotificationService()
 
@@ -26,7 +24,7 @@ export default class PostService {
         if( isEmpty( postData ) ) throw new BadRequestException( 'Post data is empty.' )
 
         const { image, body } = postData
-
+        console.log(body)
         if( image ){
             //save image
             const savedImage = await this.mediaService.save( {
