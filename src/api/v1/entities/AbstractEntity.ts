@@ -1,8 +1,20 @@
-import { BaseEntity, CreateDateColumn, DeleteDateColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
+import {
+    BaseEntity, BeforeInsert,
+    Column,
+    CreateDateColumn,
+    DeleteDateColumn,
+    UpdateDateColumn
+} from "typeorm"
+import { nanoid } from 'nanoid'
 
 export class AbstractEntity extends BaseEntity {
-    @PrimaryGeneratedColumn( 'uuid' )
-    readonly id: string
+    @Column( {
+        type: 'varchar',
+        length: 30,
+        unique: true,
+        primary: true
+    } )
+    id: string
 
     @CreateDateColumn()
     readonly createdAt: Date
@@ -12,4 +24,9 @@ export class AbstractEntity extends BaseEntity {
 
     @DeleteDateColumn( { select: false } )
     readonly deletedAt: Date
+
+    @BeforeInsert()
+    generateId() {
+        this.id = nanoid()
+    }
 }
