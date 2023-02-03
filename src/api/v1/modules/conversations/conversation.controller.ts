@@ -25,6 +25,16 @@ export default class ConversationController {
         }
     }
 
+    public getUnreadConversationsCount = async( req: Request, res: Response, next: NextFunction ) => {
+        try {
+            const count = await this.conversationService.getUnreadConversationsCount( req.auth.user.id )
+
+            res.json( { count } )
+        } catch ( err ) {
+            next( err )
+        }
+    }
+
     public getConversationById = async( req: Request, res: Response, next: NextFunction ) => {
         try {
             const conversation = await this.conversationService.getConversationById( req.params.conversationId, req.auth )
@@ -82,6 +92,16 @@ export default class ConversationController {
             const message   = await this.conversationService.sendReaction( { messageId, name }, req.auth )
 
             res.json( message )
+        } catch ( err ) {
+            next( err )
+        }
+    }
+
+    public seenAllMessages = async( req: Request, res: Response, next: NextFunction ) => {
+        try {
+            await this.conversationService.seenAllMessages( req.params.conversationId, req.auth )
+
+            res.json( {message: 'success'} )
         } catch ( err ) {
             next( err )
         }

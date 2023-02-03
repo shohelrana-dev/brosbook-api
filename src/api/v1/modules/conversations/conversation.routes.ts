@@ -22,6 +22,13 @@ router.post( '/', authMiddleware, conversationController.createConversation )
 router.get( '/', authMiddleware, conversationController.getConversations )
 
 /**
+ * @desc get unread conversations count
+ * @route GET /api/api/conversations
+ * @access Private
+ */
+router.get( '/unread_count', authMiddleware, conversationController.getUnreadConversationsCount )
+
+/**
  * @desc get one conversation by id
  * @route GET /api/api/conversations/:conversationId
  * @access Private
@@ -48,6 +55,13 @@ router.get( '/:conversationId/messages', authMiddleware, conversationController.
  * @access Private
  */
 router.post( '/:conversationId/messages', authMiddleware, conversationController.sendMessage )
+
+/**
+ * @desc seen all messages
+ * @route POST /api/api/conversations/:conversationId/messages/seen_all
+ * @access Private
+ */
+router.post( '/:conversationId/messages/seen_all', authMiddleware, conversationController.seenAllMessages )
 
 /**
  * @desc send reaction

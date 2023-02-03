@@ -14,6 +14,8 @@ import User from "@entities/User"
 import { paginateMeta } from "@utils/paginateMeta"
 import MediaService from "@services/media.service"
 import Media, { MediaSource } from "@entities/Media"
+import { Brackets, IsNull } from "typeorm"
+import message from "@entities/Message";
 
 export default class ConversationService {
     public readonly repository         = appDataSource.getRepository( Conversation )
@@ -107,6 +109,22 @@ export default class ConversationService {
         return { items: formatConversations, ...paginateMeta( count, page, limit ) }
     }
 
+    public async getUnreadConversationsCount( userId: string ): Promise<number>{
+        return await this.repository.createQueryBuilder( 'conversation' )
+            .innerJoin( "conversation.user1", "user1" )
+            .innerJoin( "conversation.user2", "user2" )
+            .innerJoin( "conversation.lastMessage", "lastMessage" )
+            .innerJoin( "lastMessage.sender", "lastMessageSender" )
+            .where( "lastMessage.seenAt IS NULL" )
+            .andWhere( "lastMessageSender.id != :userId", { userId } )
+            .andWhere( new Brackets( qb => {
+                qb.where( 'user1.id = :userId', { userId } )
+                qb.orWhere( 'user2.id = :userId', { userId } )
+            } ) )
+            .groupBy( 'conversation.id' )
+            .getCount()
+    }
+
     public async getMessages( conversationId: string, params: ListQueryParams, auth: Auth ): Promise<ListResponse<Message>>{
         if( ! conversationId ) throw new BadRequestException( 'ConversationId id is empty.' )
 
@@ -137,10 +155,14 @@ export default class ConversationService {
 
         if( ! body && ! image ) throw new BadRequestException( 'Message data is empty.' )
 
-        const conversation = await this.repository.findOneBy( { id: conversationId } )
+        const conversation = await this.repository.findOne( {
+            where: { id: conversationId },
+            relations: ['user1', 'user2']
+        } )
         if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
 
-        const sender = await this.userService.repository.findOneBy( { id: auth.user.id } )
+        const sender    = await this.userService.repository.findOneBy( { id: auth.user.id } )
+        const recipient = sender.id === conversation.user1.id ? conversation.user2 : conversation.user1
 
         const message        = new Message()
         message.conversation = conversation
@@ -162,6 +184,12 @@ export default class ConversationService {
         await this.repository.save( conversation )
 
         io.emit( `new_message_${ conversation.id }`, message )
+
+        this.getUnreadConversationsCount( recipient.id ).then( ( count ) => {
+            if( count > 0 ){
+                io.emit( `new_conversation_count_${ recipient.id }`, count )
+            }
+        } )
 
         return message
     }
@@ -205,8 +233,31 @@ export default class ConversationService {
         return message
     }
 
+    public async seenAllMessages( conversationId: string, auth: Auth ): Promise<void>{
+        if( ! conversationId ) throw new BadRequestException( 'Conversation id is empty.' )
+        const conversation = await this.repository.findOne( {
+            where: [
+                { id: conversationId, user1: { id: auth.user.id } },
+                { id: conversationId, user2: { id: auth.user.id } }
+            ]
+        } )
+        if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
+
+        const messages = await this.messageRepository.findBy( {
+            conversation: { id: conversationId },
+            seenAt: IsNull()
+        } )
+
+        if( messages.length > 0 ){
+            await this.messageRepository.update( { conversation: { id: conversationId } }, {
+                seenAt: new Date( Date.now() )
+            } )
+        }
+
+    }
+
     public async getConversationMedia( conversationId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
-        if( ! conversationId ) throw new BadRequestException( 'ConversationId id is empty.' )
+        if( ! conversationId ) throw new BadRequestException( 'Conversation id is empty.' )
 
         const page  = params.page || 1
         const limit = params.limit || 12
