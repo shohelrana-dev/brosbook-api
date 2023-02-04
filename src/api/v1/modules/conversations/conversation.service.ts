@@ -187,7 +187,7 @@ export default class ConversationService {
 
         this.getUnreadConversationsCount( recipient.id ).then( ( count ) => {
             if( count > 0 ){
-                io.emit( `new_conversation_count_${ recipient.id }`, count )
+                io.emit( `unread_conversation_count_${ recipient.id }`, count )
             }
         } )
 
@@ -239,9 +239,12 @@ export default class ConversationService {
             where: [
                 { id: conversationId, user1: { id: auth.user.id } },
                 { id: conversationId, user2: { id: auth.user.id } }
-            ]
+            ],
+            relations: ["user1", "user2"]
         } )
         if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
+
+        const participant = conversation.user1.id === auth.user.id ? conversation.user2 : conversation.user1
 
         const messages = await this.messageRepository.findBy( {
             conversation: { id: conversationId },
@@ -249,7 +252,10 @@ export default class ConversationService {
         } )
 
         if( messages.length > 0 ){
-            await this.messageRepository.update( { conversation: { id: conversationId } }, {
+            await this.messageRepository.update( {
+                conversation: { id: conversationId },
+                sender: { id: participant.id }
+            }, {
                 seenAt: new Date( Date.now() )
             } )
         }

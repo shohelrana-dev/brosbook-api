@@ -56,8 +56,6 @@ export default class NotificationService {
         }, {
             readAt: new Date( Date.now() ).toISOString()
         } )
-
-        io.emit( `unread_notification_count_${ auth.user.id }`, 0 )
     }
 
     async create( payload: { initiatorId: string, recipientId: string, postId?: string, commentId?: string, type: NotificationTypes } ): Promise<Notification>{
