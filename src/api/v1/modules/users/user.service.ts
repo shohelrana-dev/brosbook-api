@@ -320,4 +320,32 @@ export default class UserService {
 
         return targetUser
     }
+
+    public async makeUserActive( userId: string ): Promise<User>{
+        if( ! userId ) throw new BadRequestException( 'User id is empty.' )
+
+        const user = await this.repository.findOneBy( { id: userId } )
+
+        if( ! user ) throw new BadRequestException( 'User does not exists.' )
+
+        user.active = 1
+
+        await this.repository.save( user )
+
+        return user
+    }
+
+    public async makeUserInactive( userId: string ): Promise<User>{
+        if( ! userId ) throw new BadRequestException( 'User id is empty.' )
+
+        const user = await this.repository.findOneBy( { id: userId } )
+
+        if( ! user ) throw new BadRequestException( 'User does not exists.' )
+
+        user.active = 0
+
+        await this.repository.save( user )
+
+        return user
+    }
 }
