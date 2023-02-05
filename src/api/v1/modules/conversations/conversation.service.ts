@@ -235,6 +235,7 @@ export default class ConversationService {
 
     public async seenAllMessages( conversationId: string, auth: Auth ): Promise<void>{
         if( ! conversationId ) throw new BadRequestException( 'Conversation id is empty.' )
+
         const conversation = await this.repository.findOne( {
             where: [
                 { id: conversationId, user1: { id: auth.user.id } },
@@ -248,6 +249,7 @@ export default class ConversationService {
 
         const messages = await this.messageRepository.findBy( {
             conversation: { id: conversationId },
+            sender: { id: participant.id },
             seenAt: IsNull()
         } )
 
@@ -258,6 +260,7 @@ export default class ConversationService {
             }, {
                 seenAt: new Date( Date.now() )
             } )
+            io.emit( `unread_conversation_count_${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
         }
 
     }
@@ -299,11 +302,8 @@ export default class ConversationService {
     }
 
     public formatMessage( message: Message, auth: Auth ): Message{
-        if( message.sender.id === auth.user.id ){
-            message.isMeSender = true
-        } else{
-            message.isMeSender = false
-        }
+        message.isMeSender = message.sender.id === auth.user.id
+
         return message
     }
 }
