@@ -11,7 +11,7 @@ export interface Auth {
 
 export interface LoginTokenPayload {
     access_token: string
-    expires_in: number | string
+    expires_in: string | number
     token_type?: string
     user: User,
     message?: string

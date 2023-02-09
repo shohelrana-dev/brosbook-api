@@ -1,7 +1,7 @@
 import { Server } from "socket.io"
 import http from "http"
-import User from "@entities/User";
-import UserService from "@modules/users/user.service";
+import User from "@entities/User"
+import UserService from "@modules/users/user.service"
 
 
 export default function socketHandler( server: http.Server ){

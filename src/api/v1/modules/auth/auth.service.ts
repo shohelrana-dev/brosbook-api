@@ -1,15 +1,15 @@
-import argon2  from "argon2"
-import jwt     from "jsonwebtoken"
+import argon2 from "argon2"
+import jwt from "jsonwebtoken"
 import isEmpty from "is-empty"
 
-import User                               from "@entities/User"
-import { LoginTokenPayload }              from "@interfaces/index.interfaces"
+import User from "@entities/User"
+import { LoginTokenPayload } from "@interfaces/index.interfaces"
 import { LoginUserDTO, ResetPasswordDTO } from "@modules/auth/auth.dto"
-import BadRequestException                from "@exceptions/BadRequestException"
-import { CreateUserDTO }                  from "@modules/auth/auth.dto"
-import { EmailService }                   from "@services/email.service"
-import UserService                        from "@modules/users/user.service"
-import { selectAllColumns }               from "@utils/selectAllColumns"
+import BadRequestException from "@exceptions/BadRequestException"
+import { CreateUserDTO } from "@modules/auth/auth.dto"
+import { EmailService } from "@services/email.service"
+import UserService from "@modules/users/user.service"
+import { selectAllColumns } from "@utils/selectAllColumns"
 
 class AuthService {
     private readonly userService  = new UserService()
@@ -129,7 +129,7 @@ class AuthService {
             email: user.email
         }
         const secretKey         = process.env.JWT_SECRET!
-        const expires_in        = process.env.JWT_EXPIRY! || '1h'
+        const expires_in        = process.env.JWT_EXPIRY || '1d'
 
         let access_token = jwt.sign( dataStoredInToken, secretKey, { expiresIn: expires_in } )
         return { access_token, expires_in, token_type: 'Bearer', user }

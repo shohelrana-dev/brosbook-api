@@ -5,7 +5,7 @@ import { paginateMeta } from "@utils/paginateMeta"
 import { appDataSource } from "@config/data-source"
 import { Auth, ListQueryParams, ListResponse, SearchQueryParams } from "@interfaces/index.interfaces"
 import BadRequestException from "@exceptions/BadRequestException"
-import { MediaSource } from "@entities/Media"
+import Media, { MediaSource } from "@entities/Media"
 import MediaService from "@services/media.service"
 import NotFoundException from "@exceptions/NotFoundException"
 import isEmpty from "is-empty"
@@ -138,6 +138,28 @@ export default class UserService {
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
         return await Relationship.countBy( { follower: { id: userId } } )
+    }
+
+    public async getUserMedia( userId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
+        const page  = params.page || 1
+        const limit = params.limit || 16
+        const skip  = limit * ( page - 1 )
+
+        if( ! userId ) throw new BadRequestException( "User id is empty." )
+
+        const [media, count] = await this.mediaService.repository.createQueryBuilder( 'media' )
+            .leftJoin( 'media.creator', 'creator' )
+            .where( 'creator.id = :userId', { userId } )
+            /*.andWhere( new Brackets( ( qb ) => {
+                qb.where( 'media.source = :source', { source: MediaSource.AVATAR } )
+                qb.orWhere( 'media.source = :source', { source: MediaSource.COVER_PHOTO } )
+                qb.orWhere( 'media.source = :source', { source: MediaSource.POST } )
+            } ) )*/
+            .skip( skip )
+            .take( limit )
+            .getManyAndCount()
+
+        return { items: media, ...paginateMeta( count, page, limit ) }
     }
 
     public async searchUsers( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>>{

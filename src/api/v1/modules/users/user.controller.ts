@@ -82,6 +82,18 @@ export default class UserController {
         }
     }
 
+    public getUserMedia = async( req: Request, res: Response, next: NextFunction ) => {
+        const userId = req.params.userId as string
+
+        try {
+            const userMediaList = await this.usersService.getUserMedia( userId, req.query )
+
+            res.json( userMediaList )
+        } catch ( err ) {
+            next( err )
+        }
+    }
+
     public getFollowers = async( req: Request, res: Response, next: NextFunction ) => {
         const userId = req.params.userId as string
         const page   = Number( req.query.page )
