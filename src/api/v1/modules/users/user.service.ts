@@ -16,7 +16,7 @@ import UnauthorizedException from "@exceptions/UnauthorizedException"
 import { v4 as uuid } from "uuid"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
-import { Brackets } from "typeorm"
+import { Brackets, In } from "typeorm"
 import fetch from "cross-fetch"
 
 
@@ -140,24 +140,25 @@ export default class UserService {
         return await Relationship.countBy( { follower: { id: userId } } )
     }
 
-    public async getUserMedia( userId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
+    public async getUserMediaList( userId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
         const page  = params.page || 1
-        const limit = params.limit || 16
+        const limit = params.limit || 12
         const skip  = limit * ( page - 1 )
 
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
-        const [media, count] = await this.mediaService.repository.createQueryBuilder( 'media' )
-            .leftJoin( 'media.creator', 'creator' )
-            .where( 'creator.id = :userId', { userId } )
-            /*.andWhere( new Brackets( ( qb ) => {
-                qb.where( 'media.source = :source', { source: MediaSource.AVATAR } )
-                qb.orWhere( 'media.source = :source', { source: MediaSource.COVER_PHOTO } )
-                qb.orWhere( 'media.source = :source', { source: MediaSource.POST } )
-            } ) )*/
-            .skip( skip )
-            .take( limit )
-            .getManyAndCount()
+        const user = await this.repository.findOneBy( { id: userId } )
+
+        if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
+
+        const [media, count] = await this.mediaService.repository.findAndCount( {
+            where: {
+                creatorId: userId,
+                source: In( [MediaSource.AVATAR, MediaSource.COVER_PHOTO, MediaSource.POST] )
+            },
+            skip: skip,
+            take: limit
+        } )
 
         return { items: media, ...paginateMeta( count, page, limit ) }
     }

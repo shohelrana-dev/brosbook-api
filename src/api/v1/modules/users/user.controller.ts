@@ -82,11 +82,11 @@ export default class UserController {
         }
     }
 
-    public getUserMedia = async( req: Request, res: Response, next: NextFunction ) => {
+    public getUserMediaList = async( req: Request, res: Response, next: NextFunction ) => {
         const userId = req.params.userId as string
 
         try {
-            const userMediaList = await this.usersService.getUserMedia( userId, req.query )
+            const userMediaList = await this.usersService.getUserMediaList( userId, req.query )
 
             res.json( userMediaList )
         } catch ( err ) {

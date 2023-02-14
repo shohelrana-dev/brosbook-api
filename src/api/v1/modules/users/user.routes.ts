@@ -92,7 +92,7 @@ router.get( '/:userId/followings/count', usersController.getFollowingsCount )
  * @route GET /api/api/users/:userId/media
  * @access Public
  */
-router.get( '/:userId/media', usersController.getUserMedia )
+router.get( '/:userId/media', usersController.getUserMediaList )
 
 /**
  * @desc follow
