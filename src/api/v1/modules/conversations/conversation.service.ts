@@ -241,7 +241,7 @@ export default class ConversationService {
                 { id: conversationId, user1: { id: auth.user.id } },
                 { id: conversationId, user2: { id: auth.user.id } }
             ],
-            relations: ["user1", "user2"]
+            relations: ["user1", "user2", "lastMessage"]
         } )
         if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
 
@@ -260,7 +260,14 @@ export default class ConversationService {
             }, {
                 seenAt: new Date( Date.now() )
             } )
+
             io.emit( `unread_conversation_count_${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
+
+            if( conversation.lastMessage.sender.id !== auth.user.id ){
+                const message = await this.messageRepository.findOneBy( { id: conversation.lastMessage.id } )
+                io.emit( `seen_message_${ conversation.id }_${ participant.id }`, message )
+                console.log(`seen_message_${ conversation.id }_${ participant.id }`, message)
+            }
         }
 
     }
