@@ -7,7 +7,7 @@ const port: number           = Number( process.env.DB_PORT ) || 3306
 const username: string       = process.env.DB_USERNAME!
 const password: string       = process.env.DB_PASSWORD!
 const database: string       = process.env.DB_DATABASE!
-const dbSynchronize: boolean = Boolean( process.env.DB_SYNCHRONIZE || false )
+const dbSynchronize: boolean = Boolean( process.env.DB_SYNCHRONIZE )
 
 export const appDataSource = new DataSource( {
     type: dbConnection,

@@ -37,6 +37,6 @@ export default class Media extends AbstractEntity {
     source: MediaSource
 
     @ManyToOne( () => User )
-    @JoinColumn( { name: 'creatorId' } )
+    @JoinColumn( { name: 'creatorId', referencedColumnName: 'id' } )
     creator: User
 }
