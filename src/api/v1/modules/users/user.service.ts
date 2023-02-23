@@ -81,7 +81,7 @@ export default class UserService {
         user.avatar = await this.mediaService.save( {
             file: Buffer.from( await ( await fetch( tokenPayload.picture ) ).arrayBuffer() ),
             source: MediaSource.AVATAR,
-            creatorId: user.id
+            creator: user
         } )
 
         await this.repository.save( user )
@@ -153,7 +153,7 @@ export default class UserService {
 
         const [media, count] = await this.mediaService.repository.findAndCount( {
             where: {
-                creatorId: userId,
+                creator: { id: user.id },
                 source: In( [MediaSource.AVATAR, MediaSource.COVER_PHOTO, MediaSource.POST] )
             },
             skip: skip,
@@ -284,7 +284,7 @@ export default class UserService {
 
         user.avatar = await this.mediaService.save( {
             file: avatar.data,
-            creatorId: auth.user.id,
+            creator: auth.user,
             source: MediaSource.AVATAR
         } )
 
@@ -301,7 +301,7 @@ export default class UserService {
 
         profile.coverPhoto = await this.mediaService.save( {
             file: coverPhoto.data,
-            creatorId: auth.user.id,
+            creator: auth.user,
             source: MediaSource.COVER_PHOTO
         } )
         await this.profileRepository.save( profile )

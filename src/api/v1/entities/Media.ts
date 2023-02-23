@@ -13,9 +13,6 @@ export enum MediaSource {
 @Entity( 'media' )
 export default class Media extends AbstractEntity {
     @Column( { nullable: false } )
-    creatorId: string
-
-    @Column( { nullable: false } )
     name: string
 
     @Column( { nullable: false } )
@@ -37,6 +34,6 @@ export default class Media extends AbstractEntity {
     source: MediaSource
 
     @ManyToOne( () => User )
-    @JoinColumn( { name: 'creatorId', referencedColumnName: 'id' } )
+    @JoinColumn(  )
     creator: User
 }

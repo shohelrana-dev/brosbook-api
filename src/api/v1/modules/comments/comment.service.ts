@@ -83,7 +83,7 @@ export default class CommentService {
 
         await this.repository.delete( { id: comment.id } )
 
-        this.updatePostCommentsCount( comment.postId )
+        this.updatePostCommentsCount( comment.post.id )
 
         return comment
     }

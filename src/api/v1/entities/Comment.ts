@@ -13,9 +13,6 @@ import { Auth } from "@interfaces/index.interfaces"
 
 @Entity( 'comments' )
 export default class Comment extends AbstractEntity {
-    @Column( { nullable: false } )
-    postId: string
-
     @Column( { type: 'text', nullable: true } )
     body: string
 
@@ -26,7 +23,7 @@ export default class Comment extends AbstractEntity {
     author: User
 
     @ManyToOne( () => Post, { onDelete: "CASCADE" } )
-    @JoinColumn( { name: 'postId', referencedColumnName: 'id' } )
+    @JoinColumn()
     post: Post
 
     @OneToMany( () => CommentLike, like => like.comment )

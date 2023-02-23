@@ -3,6 +3,8 @@ import isEmpty from "is-empty"
 import { MediaSource } from "@entities/Media"
 import { appDataSource } from "@config/data-source"
 import { v2 as cloudinary } from "cloudinary"
+import { Auth } from "@interfaces/index.interfaces";
+import User from "@entities/User";
 
 cloudinary.config( {
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -12,14 +14,14 @@ cloudinary.config( {
 
 interface SaveMedia {
     file: Buffer
-    creatorId: string
+    creator: Auth["user"]
     source: MediaSource
 }
 
 export default class MediaService {
     public readonly repository = appDataSource.getRepository( Media )
 
-    async save( { file, creatorId, source }: SaveMedia ): Promise<Media>{
+    async save( { file, creator, source }: SaveMedia ): Promise<Media>{
         if( isEmpty( file ) ) throw new Error( 'File is empty.' )
 
         return new Promise( ( resolve, reject ) => {
@@ -32,15 +34,15 @@ export default class MediaService {
             }, async( err, result ) => {
                 if( err ) reject( err )
 
-                const media        = new Media()
-                media.url          = result.secure_url
-                media.format       = result.format
-                media.name         = result.public_id
-                media.width        = result.width
-                media.height       = result.height
-                media.size         = result.bytes
-                media.source       = source
-                media.creatorId      = creatorId
+                const media     = new Media()
+                media.url       = result.secure_url
+                media.format    = result.format
+                media.name      = result.public_id
+                media.width     = result.width
+                media.height    = result.height
+                media.size      = result.bytes
+                media.source    = source
+                media.creator = creator as User
                 await this.repository.save( media )
 
                 resolve( media )

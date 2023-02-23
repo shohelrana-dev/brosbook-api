@@ -172,7 +172,7 @@ export default class ConversationService {
         if( image ){
             message.image = await this.mediaService.save( {
                 file: image.data,
-                creatorId: sender.id,
+                creator: sender,
                 source: MediaSource.CONVERSATION
             } )
         } else{
@@ -180,7 +180,7 @@ export default class ConversationService {
         }
         await this.messageRepository.save( message )
 
-        conversation.lastMessageId = message.id
+        conversation.lastMessage = message
         await this.repository.save( conversation )
 
         io.emit( `new_message_${ conversation.id }`, message )
@@ -211,22 +211,20 @@ export default class ConversationService {
 
         let reaction = await this.reactionRepository.findOneBy( {
             sender: { id: auth.user.id },
-            messageId,
+            message: { id: message.id },
         } )
 
         if( reaction ){
             reaction.name = name
-            reaction.url  = `${ process.env.SERVER_URL }/reactions/${ name }.png`
         } else{
-            reaction           = new Reaction()
-            reaction.name      = name
-            reaction.url       = `${ process.env.SERVER_URL }/reactions/${ name }.png`
-            reaction.sender    = auth.user as User
-            reaction.messageId = message.id
+            reaction         = new Reaction()
+            reaction.name    = name
+            reaction.sender  = auth.user as User
+            reaction.message = message
         }
         await this.reactionRepository.save( reaction )
 
-        message.reactions = await this.reactionRepository.findBy( { messageId } )
+        message.reactions = await this.reactionRepository.findBy( { message: { id: messageId } } )
 
         io.emit( `new_reaction_${ message.conversation.id }`, message )
 
@@ -266,7 +264,7 @@ export default class ConversationService {
             if( conversation.lastMessage.sender.id !== auth.user.id ){
                 const message = await this.messageRepository.findOneBy( { id: conversation.lastMessage.id } )
                 io.emit( `seen_message_${ conversation.id }_${ participant.id }`, message )
-                console.log(`seen_message_${ conversation.id }_${ participant.id }`, message)
+                console.log( `seen_message_${ conversation.id }_${ participant.id }`, message )
             }
         }
 
