@@ -1,1 +1,0 @@
-{"version":3,"file":"selectAllColumns.js","sourceRoot":"","sources":["../../../../src/api/v1/utils/selectAllColumns.ts"],"names":[],"mappings":";;;AAEA,SAAgB,gBAAgB,CAAK,UAAyB;IAC1D,OAAS,UAAU,CAAC,QAAQ,CAAC,OAAO,CAAC,GAAG,CAAE,GAAG,CAAC,EAAE,CAAC,GAAG,CAAC,YAAY,CAAqB,CAAA;AAC1F,CAAC;AAFD,4CAEC"}

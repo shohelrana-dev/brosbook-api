@@ -1,1 +1,0 @@
-{"version":3,"file":"NotAcceptableException.js","sourceRoot":"","sources":["../../../../src/api/v1/exceptions/NotAcceptableException.ts"],"names":[],"mappings":";;;AAAA,sFAAqD;AAErD,MAAqB,sBAAuB,SAAQ,uBAAa;IAC7D,YAAY,OAAc;QACtB,KAAK,CAAC,OAAO,CAAC,CAAA;QACd,IAAI,CAAC,UAAU,GAAG,GAAG,CAAA;QACrB,IAAI,CAAC,IAAI,GAAG,wBAAwB,CAAA;IACxC,CAAC;CACJ;AAND,yCAMC"}
