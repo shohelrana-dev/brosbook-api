@@ -15,22 +15,16 @@ const notificationController = new notification_controller_1.default(notificatio
  */
 router.get('/', auth_middleware_1.default, notificationController.getMany);
 /**
- * @desc update all notifications
- * @route PUT /api/api/notifications
+ * @desc read all notifications
+ * @route PUT /api/api/notifications/read_all
  * @access Private
  */
-router.put('/', auth_middleware_1.default, notificationController.updateAll);
+router.put('/read_all', auth_middleware_1.default, notificationController.readAll);
 /**
  * @desc get notifications count
  * @route GET /api/api/notifications/unread_count
  * @access Private
  */
 router.get('/unread_count', auth_middleware_1.default, notificationController.getUnreadCount);
-/**
- * @desc update notification
- * @route GET /api/api/notifications/notificationId
- * @access Private
- */
-router.put('/:notificationId', auth_middleware_1.default, notificationController.update);
 exports.default = router;
 //# sourceMappingURL=notification.routes.js.map

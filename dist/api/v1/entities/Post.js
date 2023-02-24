@@ -9,8 +9,13 @@ const AbstractEntity_1 = require("./AbstractEntity");
 const Media_1 = tslib_1.__importDefault(require("./Media"));
 let Post = class Post extends AbstractEntity_1.AbstractEntity {
     async setViewerProperties(auth) {
-        const like = await PostLike_1.default.findOneBy({ user: { id: auth.user.id }, post: { id: this.id } });
-        this.isViewerLiked = Boolean(like);
+        if (auth.isAuthenticated) {
+            const like = await PostLike_1.default.findOneBy({ user: { id: auth.user.id }, post: { id: this.id } });
+            this.isViewerLiked = Boolean(like);
+        }
+        else {
+            this.isViewerLiked = false;
+        }
         if (this.author) {
             await this.author.setViewerProperties(auth);
         }

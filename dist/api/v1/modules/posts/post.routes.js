@@ -25,7 +25,7 @@ router.post('/', auth_middleware_1.default, postController.create);
  * @route GET posts
  * @access Private
  * */
-router.get('/feed', auth_middleware_1.default, postController.getFeedPosts);
+router.get('/feed', postController.getFeedPosts);
 /**
  * @desc get post by postId
  * @route GET posts/:postId

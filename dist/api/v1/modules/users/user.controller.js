@@ -70,6 +70,16 @@ class UserController {
                 next(err);
             }
         };
+        this.getUserMediaList = async (req, res, next) => {
+            const userId = req.params.userId;
+            try {
+                const userMediaList = await this.usersService.getUserMediaList(userId, req.query);
+                res.json(userMediaList);
+            }
+            catch (err) {
+                next(err);
+            }
+        };
         this.getFollowers = async (req, res, next) => {
             const userId = req.params.userId;
             const page = Number(req.query.page);

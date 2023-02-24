@@ -18,10 +18,6 @@ let Media = class Media extends AbstractEntity_1.AbstractEntity {
 tslib_1.__decorate([
     (0, typeorm_1.Column)({ nullable: false }),
     tslib_1.__metadata("design:type", String)
-], Media.prototype, "creatorId", void 0);
-tslib_1.__decorate([
-    (0, typeorm_1.Column)({ nullable: false }),
-    tslib_1.__metadata("design:type", String)
 ], Media.prototype, "name", void 0);
 tslib_1.__decorate([
     (0, typeorm_1.Column)({ nullable: false }),
@@ -49,7 +45,7 @@ tslib_1.__decorate([
 ], Media.prototype, "source", void 0);
 tslib_1.__decorate([
     (0, typeorm_1.ManyToOne)(() => User_1.default),
-    (0, typeorm_1.JoinColumn)({ name: 'creatorId' }),
+    (0, typeorm_1.JoinColumn)(),
     tslib_1.__metadata("design:type", User_1.default)
 ], Media.prototype, "creator", void 0);
 Media = tslib_1.__decorate([

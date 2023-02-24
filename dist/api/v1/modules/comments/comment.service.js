@@ -73,7 +73,7 @@ class CommentService {
             throw new ForbiddenException_1.default('You are not owner of the comment.');
         }
         await this.repository.delete({ id: comment.id });
-        this.updatePostCommentsCount(comment.postId);
+        this.updatePostCommentsCount(comment.post.id);
         return comment;
     }
     async like(commentId, auth) {

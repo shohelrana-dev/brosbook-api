@@ -21,6 +21,12 @@ router.post('/', auth_middleware_1.default, conversationController.createConvers
  */
 router.get('/', auth_middleware_1.default, conversationController.getConversations);
 /**
+ * @desc get unread conversations count
+ * @route GET /api/api/conversations
+ * @access Private
+ */
+router.get('/unread_count', auth_middleware_1.default, conversationController.getUnreadConversationsCount);
+/**
  * @desc get one conversation by id
  * @route GET /api/api/conversations/:conversationId
  * @access Private
@@ -44,6 +50,12 @@ router.get('/:conversationId/messages', auth_middleware_1.default, conversationC
  * @access Private
  */
 router.post('/:conversationId/messages', auth_middleware_1.default, conversationController.sendMessage);
+/**
+ * @desc seen all messages
+ * @route POST /api/api/conversations/:conversationId/messages/seen_all
+ * @access Private
+ */
+router.post('/:conversationId/messages/seen_all', auth_middleware_1.default, conversationController.seenAllMessages);
 /**
  * @desc send reaction
  * @route POST /api/api/conversations/:conversationId/messages/:messageId/reactions

@@ -41,7 +41,7 @@ class NotificationService {
         await this.repository.save(notification);
         return notification;
     }
-    async updateAll(auth) {
+    async readAll(auth) {
         await this.repository.update({
             recipient: { id: auth.user.id },
             readAt: (0, typeorm_1.IsNull)()

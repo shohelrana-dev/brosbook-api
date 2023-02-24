@@ -104,7 +104,7 @@ class AuthService {
             email: user.email
         };
         const secretKey = process.env.JWT_SECRET;
-        const expires_in = process.env.JWT_EXPIRY || '1h';
+        const expires_in = process.env.JWT_EXPIRY || '1d';
         let access_token = jsonwebtoken_1.default.sign(dataStoredInToken, secretKey, { expiresIn: expires_in });
         return { access_token, expires_in, token_type: 'Bearer', user };
     }

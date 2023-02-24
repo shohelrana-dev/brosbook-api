@@ -14,7 +14,7 @@ class MediaService {
     constructor() {
         this.repository = data_source_1.appDataSource.getRepository(Media_1.default);
     }
-    async save({ file, creatorId, source }) {
+    async save({ file, creator, source }) {
         if ((0, is_empty_1.default)(file))
             throw new Error('File is empty.');
         return new Promise((resolve, reject) => {
@@ -35,7 +35,7 @@ class MediaService {
                 media.height = result.height;
                 media.size = result.bytes;
                 media.source = source;
-                media.creatorId = creatorId;
+                media.creator = creator;
                 await this.repository.save(media);
                 resolve(media);
             }).end(file);

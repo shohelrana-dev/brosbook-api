@@ -10,7 +10,7 @@ const port = Number(process.env.DB_PORT) || 3306;
 const username = process.env.DB_USERNAME;
 const password = process.env.DB_PASSWORD;
 const database = process.env.DB_DATABASE;
-const dbSynchronize = Boolean(process.env.DB_SYNCHRONIZE || false);
+const dbSynchronize = Boolean(process.env.DB_SYNCHRONIZE);
 exports.appDataSource = new typeorm_1.DataSource({
     type: dbConnection,
     host: host,

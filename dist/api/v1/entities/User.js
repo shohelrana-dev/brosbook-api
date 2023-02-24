@@ -29,11 +29,16 @@ let User = class User extends AbstractEntity_1.AbstractEntity {
         }
     }
     async setViewerProperties(auth) {
-        const relationship = await Relationship_1.default.findOneBy({
-            follower: { id: auth.user.id },
-            following: { id: this.id }
-        });
-        this.isViewerFollow = Boolean(relationship);
+        if (auth.isAuthenticated) {
+            const relationship = await Relationship_1.default.findOneBy({
+                follower: { id: auth.user.id },
+                following: { id: this.id }
+            });
+            this.isViewerFollow = Boolean(relationship);
+        }
+        else {
+            this.isViewerFollow = false;
+        }
         return this;
     }
 };

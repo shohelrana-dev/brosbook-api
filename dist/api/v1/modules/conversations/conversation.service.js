@@ -13,6 +13,7 @@ const Reaction_1 = tslib_1.__importDefault(require("../../entities/Reaction"));
 const paginateMeta_1 = require("../../utils/paginateMeta");
 const media_service_1 = tslib_1.__importDefault(require("../../services/media.service"));
 const Media_1 = require("../../entities/Media");
+const typeorm_1 = require("typeorm");
 class ConversationService {
     constructor() {
         this.repository = data_source_1.appDataSource.getRepository(Conversation_1.default);
@@ -92,6 +93,21 @@ class ConversationService {
         const formatConversations = conversations.map(conversation => this.formatConversation(conversation, auth));
         return Object.assign({ items: formatConversations }, (0, paginateMeta_1.paginateMeta)(count, page, limit));
     }
+    async getUnreadConversationsCount(userId) {
+        return await this.repository.createQueryBuilder('conversation')
+            .innerJoin("conversation.user1", "user1")
+            .innerJoin("conversation.user2", "user2")
+            .innerJoin("conversation.lastMessage", "lastMessage")
+            .innerJoin("lastMessage.sender", "lastMessageSender")
+            .where("lastMessage.seenAt IS NULL")
+            .andWhere("lastMessageSender.id != :userId", { userId })
+            .andWhere(new typeorm_1.Brackets(qb => {
+            qb.where('user1.id = :userId', { userId });
+            qb.orWhere('user2.id = :userId', { userId });
+        }))
+            .groupBy('conversation.id')
+            .getCount();
+    }
     async getMessages(conversationId, params, auth) {
         if (!conversationId)
             throw new BadRequestException_1.default('ConversationId id is empty.');
@@ -116,10 +132,14 @@ class ConversationService {
         const { image, body, type } = messageData;
         if (!body && !image)
             throw new BadRequestException_1.default('Message data is empty.');
-        const conversation = await this.repository.findOneBy({ id: conversationId });
+        const conversation = await this.repository.findOne({
+            where: { id: conversationId },
+            relations: ['user1', 'user2']
+        });
         if (!conversation)
             throw new NotFoundException_1.default('Conversation doesn\'t exists.');
         const sender = await this.userService.repository.findOneBy({ id: auth.user.id });
+        const recipient = sender.id === conversation.user1.id ? conversation.user2 : conversation.user1;
         const message = new Message_1.default();
         message.conversation = conversation;
         message.sender = sender;
@@ -127,7 +147,7 @@ class ConversationService {
         if (image) {
             message.image = await this.mediaService.save({
                 file: image.data,
-                creatorId: sender.id,
+                creator: sender,
                 source: Media_1.MediaSource.CONVERSATION
             });
         }
@@ -135,9 +155,14 @@ class ConversationService {
             message.body = body;
         }
         await this.messageRepository.save(message);
-        conversation.lastMessageId = message.id;
+        conversation.lastMessage = message;
         await this.repository.save(conversation);
         express_1.io.emit(`new_message_${conversation.id}`, message);
+        this.getUnreadConversationsCount(recipient.id).then((count) => {
+            if (count > 0) {
+                express_1.io.emit(`unread_conversation_count_${recipient.id}`, count);
+            }
+        });
         return message;
     }
     async sendReaction(reactionData, auth) {
@@ -155,27 +180,58 @@ class ConversationService {
             throw new NotFoundException_1.default('Message doesn\'t exists.');
         let reaction = await this.reactionRepository.findOneBy({
             sender: { id: auth.user.id },
-            messageId,
+            message: { id: message.id },
         });
         if (reaction) {
             reaction.name = name;
-            reaction.url = `${process.env.SERVER_URL}/reactions/${name}.png`;
         }
         else {
             reaction = new Reaction_1.default();
             reaction.name = name;
-            reaction.url = `${process.env.SERVER_URL}/reactions/${name}.png`;
             reaction.sender = auth.user;
-            reaction.messageId = message.id;
+            reaction.message = message;
         }
         await this.reactionRepository.save(reaction);
-        message.reactions = await this.reactionRepository.findBy({ messageId });
+        message.reactions = await this.reactionRepository.findBy({ message: { id: messageId } });
         express_1.io.emit(`new_reaction_${message.conversation.id}`, message);
         return message;
     }
+    async seenAllMessages(conversationId, auth) {
+        if (!conversationId)
+            throw new BadRequestException_1.default('Conversation id is empty.');
+        const conversation = await this.repository.findOne({
+            where: [
+                { id: conversationId, user1: { id: auth.user.id } },
+                { id: conversationId, user2: { id: auth.user.id } }
+            ],
+            relations: ["user1", "user2", "lastMessage"]
+        });
+        if (!conversation)
+            throw new NotFoundException_1.default('Conversation doesn\'t exists.');
+        const participant = conversation.user1.id === auth.user.id ? conversation.user2 : conversation.user1;
+        const messages = await this.messageRepository.findBy({
+            conversation: { id: conversationId },
+            sender: { id: participant.id },
+            seenAt: (0, typeorm_1.IsNull)()
+        });
+        if (messages.length > 0) {
+            await this.messageRepository.update({
+                conversation: { id: conversationId },
+                sender: { id: participant.id }
+            }, {
+                seenAt: new Date(Date.now())
+            });
+            express_1.io.emit(`unread_conversation_count_${auth.user.id}`, await this.getUnreadConversationsCount(auth.user.id));
+            if (conversation.lastMessage.sender.id !== auth.user.id) {
+                const message = await this.messageRepository.findOneBy({ id: conversation.lastMessage.id });
+                express_1.io.emit(`seen_message_${conversation.id}_${participant.id}`, message);
+                console.log(`seen_message_${conversation.id}_${participant.id}`, message);
+            }
+        }
+    }
     async getConversationMedia(conversationId, params) {
         if (!conversationId)
-            throw new BadRequestException_1.default('ConversationId id is empty.');
+            throw new BadRequestException_1.default('Conversation id is empty.');
         const page = params.page || 1;
         const limit = params.limit || 12;
         const skip = limit * (page - 1);
@@ -206,12 +262,7 @@ class ConversationService {
         return conversation;
     }
     formatMessage(message, auth) {
-        if (message.sender.id === auth.user.id) {
-            message.isMeSender = true;
-        }
-        else {
-            message.isMeSender = false;
-        }
+        message.isMeSender = message.sender.id === auth.user.id;
         return message;
     }
 }

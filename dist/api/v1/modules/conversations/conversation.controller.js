@@ -21,6 +21,15 @@ class ConversationController {
                 next(err);
             }
         };
+        this.getUnreadConversationsCount = async (req, res, next) => {
+            try {
+                const count = await this.conversationService.getUnreadConversationsCount(req.auth.user.id);
+                res.json({ count });
+            }
+            catch (err) {
+                next(err);
+            }
+        };
         this.getConversationById = async (req, res, next) => {
             try {
                 const conversation = await this.conversationService.getConversationById(req.params.conversationId, req.auth);
@@ -73,6 +82,15 @@ class ConversationController {
                 const name = req.body.name;
                 const message = await this.conversationService.sendReaction({ messageId, name }, req.auth);
                 res.json(message);
+            }
+            catch (err) {
+                next(err);
+            }
+        };
+        this.seenAllMessages = async (req, res, next) => {
+            try {
+                await this.conversationService.seenAllMessages(req.params.conversationId, req.auth);
+                res.json({ message: 'success' });
             }
             catch (err) {
                 next(err);

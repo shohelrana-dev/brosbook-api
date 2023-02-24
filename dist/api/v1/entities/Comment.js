@@ -8,18 +8,19 @@ const User_1 = tslib_1.__importDefault(require("./User"));
 const CommentLike_1 = tslib_1.__importDefault(require("./CommentLike"));
 let Comment = class Comment extends AbstractEntity_1.AbstractEntity {
     async setViewerProperties(auth) {
-        const like = await CommentLike_1.default.findOneBy({ user: { id: auth.user.id }, comment: { id: this.id } });
-        this.isViewerLiked = Boolean(like);
+        if (auth.isAuthenticated) {
+            const like = await CommentLike_1.default.findOneBy({ user: { id: auth.user.id }, comment: { id: this.id } });
+            this.isViewerLiked = Boolean(like);
+        }
+        else {
+            this.isViewerLiked = false;
+        }
         if (this.author) {
             await this.author.setViewerProperties(auth);
         }
         return this;
     }
 };
-tslib_1.__decorate([
-    (0, typeorm_1.Column)({ nullable: false }),
-    tslib_1.__metadata("design:type", String)
-], Comment.prototype, "postId", void 0);
 tslib_1.__decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     tslib_1.__metadata("design:type", String)
@@ -34,7 +35,7 @@ tslib_1.__decorate([
 ], Comment.prototype, "author", void 0);
 tslib_1.__decorate([
     (0, typeorm_1.ManyToOne)(() => Post_1.default, { onDelete: "CASCADE" }),
-    (0, typeorm_1.JoinColumn)({ name: 'postId', referencedColumnName: 'id' }),
+    (0, typeorm_1.JoinColumn)(),
     tslib_1.__metadata("design:type", Post_1.default)
 ], Comment.prototype, "post", void 0);
 tslib_1.__decorate([

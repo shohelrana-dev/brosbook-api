@@ -21,18 +21,9 @@ class NotificationController {
                 next(err);
             }
         };
-        this.update = async (req, res, next) => {
+        this.readAll = async (req, res, next) => {
             try {
-                const notification = await this.notificationService.update(req.params.notificationId);
-                res.json(notification);
-            }
-            catch (err) {
-                next(err);
-            }
-        };
-        this.updateAll = async (req, res, next) => {
-            try {
-                await this.notificationService.updateAll(req.auth);
+                await this.notificationService.readAll(req.auth);
                 res.json();
             }
             catch (err) {

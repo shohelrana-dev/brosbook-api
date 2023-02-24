@@ -12,14 +12,12 @@ const BadRequestException_1 = tslib_1.__importDefault(require("../../exceptions/
 const media_service_1 = tslib_1.__importDefault(require("../../services/media.service"));
 const User_1 = tslib_1.__importDefault(require("../../entities/User"));
 const data_source_1 = require("../../../../config/data-source");
-const Comment_1 = tslib_1.__importDefault(require("../../entities/Comment"));
 const notification_service_1 = tslib_1.__importDefault(require("../notifications/notification.service"));
 const Notification_1 = require("../../entities/Notification");
 class PostService {
     constructor() {
         this.repository = data_source_1.appDataSource.getRepository(Post_1.default);
         this.likeRepository = data_source_1.appDataSource.getRepository(PostLike_1.default);
-        this.commentRepository = data_source_1.appDataSource.getRepository(Comment_1.default);
         this.mediaService = new media_service_1.default();
         this.notificationService = new notification_service_1.default();
     }
@@ -27,11 +25,12 @@ class PostService {
         if ((0, is_empty_1.default)(postData))
             throw new BadRequestException_1.default('Post data is empty.');
         const { image, body } = postData;
+        console.log(body);
         if (image) {
             //save image
             const savedImage = await this.mediaService.save({
                 file: image.data,
-                creatorId: auth.user.id,
+                creator: auth.user,
                 source: Media_1.MediaSource.POST
             });
             //save post
@@ -111,6 +110,9 @@ class PostService {
         return Object.assign({ items: formattedPosts }, (0, paginateMeta_1.paginateMeta)(count, page, limit));
     }
     async getFeedPosts(params, auth) {
+        if (!auth.isAuthenticated) {
+            return this.getMany(params, auth);
+        }
         const page = params.page || 1;
         const limit = params.limit || 6;
         const skip = limit * (page - 1);

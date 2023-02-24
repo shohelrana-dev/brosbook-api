@@ -13,7 +13,7 @@ const commentController = new comment_controller_1.default(commentService);
  * @route GET /posts/:postId/comments
  * @access Private
  */
-router.get('/:postId/comments/', auth_middleware_1.default, commentController.getMany);
+router.get('/:postId/comments/', commentController.getMany);
 /**
  * @desc create comment
  * @route POST /posts/:postId/comments

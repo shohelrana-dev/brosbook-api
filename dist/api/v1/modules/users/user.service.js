@@ -73,7 +73,7 @@ class UserService {
         user.avatar = await this.mediaService.save({
             file: Buffer.from(await (await (0, cross_fetch_1.default)(tokenPayload.picture)).arrayBuffer()),
             source: Media_1.MediaSource.AVATAR,
-            creatorId: user.id
+            creator: user
         });
         await this.repository.save(user);
         await this.profileRepository.create({ user }).save();
@@ -118,6 +118,25 @@ class UserService {
         if (!userId)
             throw new BadRequestException_1.default("User id is empty.");
         return await Relationship_1.default.countBy({ follower: { id: userId } });
+    }
+    async getUserMediaList(userId, params) {
+        const page = params.page || 1;
+        const limit = params.limit || 12;
+        const skip = limit * (page - 1);
+        if (!userId)
+            throw new BadRequestException_1.default("User id is empty.");
+        const user = await this.repository.findOneBy({ id: userId });
+        if (!user)
+            throw new NotFoundException_1.default('User doesn\'t exists.');
+        const [media, count] = await this.mediaService.repository.findAndCount({
+            where: {
+                creator: { id: user.id },
+                source: (0, typeorm_1.In)([Media_1.MediaSource.AVATAR, Media_1.MediaSource.COVER_PHOTO, Media_1.MediaSource.POST])
+            },
+            skip: skip,
+            take: limit
+        });
+        return Object.assign({ items: media }, (0, paginateMeta_1.paginateMeta)(count, page, limit));
     }
     async searchUsers(params, auth) {
         const key = params.key;
@@ -176,16 +195,13 @@ class UserService {
         const skip = limit * (page - 1);
         const [relationships, count] = await this.relationshipRepository
             .createQueryBuilder('relationship')
-            .leftJoin('relationship.follower', 'follower')
-            .leftJoin('relationship.following', 'following')
+            .leftJoinAndSelect('relationship.follower', 'follower')
+            .leftJoinAndSelect('relationship.following', 'following')
             .leftJoinAndSelect('follower.avatar', 'followerAvatar')
             .leftJoinAndSelect('following.avatar', 'followingAvatar')
             .leftJoinAndSelect('follower.profile', 'followerProfile')
             .leftJoinAndSelect('following.profile', 'followingProfile')
             .where('following.id = :followingId', { followingId: userId })
-            .select('relationship.id')
-            .addSelect('follower')
-            .addSelect('following')
             .take(limit)
             .skip(skip)
             .getManyAndCount();
@@ -201,16 +217,13 @@ class UserService {
         const skip = limit * (page - 1);
         const [relationships, count] = await this.relationshipRepository
             .createQueryBuilder('relationship')
-            .leftJoin('relationship.following', 'following')
-            .leftJoin('relationship.follower', 'follower')
+            .leftJoinAndSelect('relationship.following', 'following')
+            .leftJoinAndSelect('relationship.follower', 'follower')
             .leftJoinAndSelect('follower.avatar', 'followerAvatar')
             .leftJoinAndSelect('following.avatar', 'followingAvatar')
             .leftJoinAndSelect('follower.profile', 'followerProfile')
             .leftJoinAndSelect('following.profile', 'followingProfile')
             .where('follower.id = :followerId', { followerId: userId })
-            .select('relationship.id')
-            .addSelect('following')
-            .addSelect('follower')
             .take(limit)
             .skip(skip)
             .getManyAndCount();
@@ -224,7 +237,7 @@ class UserService {
         const user = await this.repository.findOneBy({ id: auth.user.id });
         user.avatar = await this.mediaService.save({
             file: avatar.data,
-            creatorId: auth.user.id,
+            creator: auth.user,
             source: Media_1.MediaSource.AVATAR
         });
         return await this.repository.save(user);
@@ -238,7 +251,7 @@ class UserService {
             throw new BadRequestException_1.default("User does not exists.");
         profile.coverPhoto = await this.mediaService.save({
             file: coverPhoto.data,
-            creatorId: auth.user.id,
+            creator: auth.user,
             source: Media_1.MediaSource.COVER_PHOTO
         });
         await this.profileRepository.save(profile);
@@ -269,6 +282,26 @@ class UserService {
         await this.relationshipRepository.delete({ follower: { id: auth.user.id }, following: { id: targetUser.id } });
         targetUser.isViewerFollow = false;
         return targetUser;
+    }
+    async makeUserActive(userId) {
+        if (!userId)
+            throw new BadRequestException_1.default('User id is empty.');
+        const user = await this.repository.findOneBy({ id: userId });
+        if (!user)
+            throw new BadRequestException_1.default('User does not exists.');
+        user.active = 1;
+        await this.repository.save(user);
+        return user;
+    }
+    async makeUserInactive(userId) {
+        if (!userId)
+            throw new BadRequestException_1.default('User id is empty.');
+        const user = await this.repository.findOneBy({ id: userId });
+        if (!user)
+            throw new BadRequestException_1.default('User does not exists.');
+        user.active = 0;
+        await this.repository.save(user);
+        return user;
     }
 }
 exports.default = UserService;

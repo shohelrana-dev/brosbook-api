@@ -45,7 +45,7 @@ router.get('/suggestions', auth_middleware_1.default, usersController.getSuggest
  */
 router.get('/:userId', usersController.getUserById);
 /**
- * @desc get user by username =
+ * @desc get user by username
  * @route GET /api/api/users/by/username/:username
  * @access Public
  */
@@ -74,6 +74,12 @@ router.get('/:userId/followings', usersController.getFollowings);
  * @access Public
  */
 router.get('/:userId/followings/count', usersController.getFollowingsCount);
+/**
+ * @desc get user media
+ * @route GET /api/api/users/:userId/media
+ * @access Public
+ */
+router.get('/:userId/media', usersController.getUserMediaList);
 /**
  * @desc follow
  * @route POST /api/api/users/follow/:userId
