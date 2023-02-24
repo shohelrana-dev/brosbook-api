@@ -8,9 +8,8 @@ export default function socketHandler( server: http.Server ){
     //initialize io
     const io = new Server( server, {
         cors: {
-            credentials: true,
-            origin: process.env.CLIENT_URL,
-            optionsSuccessStatus: 200
+            origin: 'https://brosbook-api.vercel.app',
+            methods: ["GET", "POST"]
         }
     } )
 
