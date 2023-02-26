@@ -21,7 +21,7 @@ class Reaction extends AbstractEntity {
 
     @AfterLoad()
     makeUrl(){
-        this.url = `${ process.env.SERVER_URL }/reactions/${ name }.png`
+        this.url = `${ process.env.SERVER_URL }/reactions/${ this.name }.png`
     }
 }
 

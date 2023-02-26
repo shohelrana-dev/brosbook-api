@@ -165,7 +165,7 @@ export default class ConversationService {
         const recipient = sender.id === conversation.user1.id ? conversation.user2 : conversation.user1
 
         const message        = new Message()
-        message.conversation = conversation
+        message.conversation = { id: conversation.id } as Conversation
         message.sender       = sender
         message.type         = type
 
@@ -180,7 +180,7 @@ export default class ConversationService {
         }
         await this.messageRepository.save( message )
 
-        io.emit( `message.new._${ conversation.id }`, message )
+        io.emit( `message.new.${ conversation.id }`, message )
 
         conversation.lastMessage = { id: message.id } as Message
         await this.repository.save( conversation )
