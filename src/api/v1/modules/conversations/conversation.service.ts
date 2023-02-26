@@ -180,10 +180,10 @@ export default class ConversationService {
         }
         await this.messageRepository.save( message )
 
-        conversation.lastMessage = message
-        await this.repository.save( conversation )
-
         io.emit( `message.new._${ conversation.id }`, message )
+
+        conversation.lastMessage = { id: message.id } as Message
+        await this.repository.save( conversation )
 
         this.getUnreadConversationsCount( recipient.id ).then( ( count ) => {
             if( count > 0 ){
