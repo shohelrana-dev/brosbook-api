@@ -183,11 +183,11 @@ export default class ConversationService {
         conversation.lastMessage = message
         await this.repository.save( conversation )
 
-        io.emit( `new_message_${ conversation.id }`, message )
+        io.emit( `message.new._${ conversation.id }`, message )
 
         this.getUnreadConversationsCount( recipient.id ).then( ( count ) => {
             if( count > 0 ){
-                io.emit( `unread_conversation_count_${ recipient.id }`, count )
+                io.emit( `conversation.unread.count.${ recipient.id }`, count )
             }
         } )
 
@@ -226,7 +226,7 @@ export default class ConversationService {
 
         message.reactions = await this.reactionRepository.findBy( { message: { id: messageId } } )
 
-        io.emit( `new_reaction_${ message.conversation.id }`, message )
+        io.emit( `message.update.${ message.conversation.id }`, message )
 
         return message
     }
@@ -259,12 +259,11 @@ export default class ConversationService {
                 seenAt: new Date( Date.now() )
             } )
 
-            io.emit( `unread_conversation_count_${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
+            io.emit( `conversation.unread.count.${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
 
             if( conversation.lastMessage.sender.id !== auth.user.id ){
                 const message = await this.messageRepository.findOneBy( { id: conversation.lastMessage.id } )
-                io.emit( `seen_message_${ conversation.id }_${ participant.id }`, message )
-                console.log( `seen_message_${ conversation.id }_${ participant.id }`, message )
+                io.emit( `message.seen.${ conversation.id }.${ participant.id }`, message )
             }
         }
 
