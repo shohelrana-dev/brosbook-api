@@ -24,7 +24,7 @@ export default class PostService {
         if( isEmpty( postData ) ) throw new BadRequestException( 'Post data is empty.' )
 
         const { image, body } = postData
-        console.log(body)
+
         if( image ){
             //save image
             const savedImage = await this.mediaService.save( {
