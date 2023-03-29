@@ -20,7 +20,7 @@ class AuthService {
 
         const user = await this.userService.create( userData )
 
-        this.emailService.sendEmailVerificationLink( userData.email, user.username )
+        await this.emailService.sendEmailVerificationLink( userData.email, user.username )
 
         return user
     }
@@ -64,7 +64,7 @@ class AuthService {
 
         if( ! user ) throw new BadRequestException( 'User not found with the email.' )
 
-        this.emailService.sendResetPasswordLink( email )
+        await this.emailService.sendResetPasswordLink( email )
     }
 
     public async resetPassword( payload: ResetPasswordDTO ): Promise<User>{
@@ -119,7 +119,7 @@ class AuthService {
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
-        this.emailService.sendEmailVerificationLink( user.email, user.username )
+        await this.emailService.sendEmailVerificationLink( user.email, user.username )
     }
 
     private static createJwtLoginToken( user: User ): LoginTokenPayload{
