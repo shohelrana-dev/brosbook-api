@@ -1,24 +1,25 @@
 //dependencies
 import 'reflect-metadata'
 import express, { Application } from 'express'
-import morgan                   from 'morgan'
-import dotenv                   from "dotenv"
-import cors                     from 'cors'
-import path                     from "path"
-import cookieParser             from "cookie-parser"
-import http                     from "http"
+import morgan from 'morgan'
+import dotenv from "dotenv"
+import cors from 'cors'
+import path from "path"
+import cookieParser from "cookie-parser"
+import http from "http"
+import cron from "node-cron"
 
 //env config
 dotenv.config()
 
 
 //internal import
-import notFoundMiddleware        from "@middleware/not-found.middleware"
-import errorMiddleware           from '@middleware/error.middleware'
+import notFoundMiddleware from "@middleware/not-found.middleware"
+import errorMiddleware from '@middleware/error.middleware'
 import deserializeUserMiddleware from '@middleware/deserialize-user.middleware'
-import socketInit                from "@startup/socket"
-import fileUpload                from "express-fileupload"
-import routes                    from '@startup/routes'
+import socketInit from "@startup/socket"
+import fileUpload from "express-fileupload"
+import routes from '@startup/routes'
 
 //Application
 const app: Application = express()
@@ -52,5 +53,10 @@ app.use( routes )
 // handle error
 app.use( notFoundMiddleware )
 app.use( errorMiddleware )
+
+//the server is alive every 14 minutes for render.app deployment
+cron.schedule( '*/14 * * * *', () => {
+    console.log( 'Run every 14 minutes to make the server live.' )
+} )
 
 export { server }
