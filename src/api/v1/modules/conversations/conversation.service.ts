@@ -261,10 +261,9 @@ export default class ConversationService {
 
             io.emit( `conversation.unread.count.${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
 
-            if( conversation.lastMessage.sender.id !== auth.user.id ){
-                const message = await this.messageRepository.findOneBy( { id: conversation.lastMessage.id } )
-                io.emit( `message.seen.${ conversation.id }.${ participant.id }`, message )
-            }
+
+            const message = await this.messageRepository.findOneBy( { id: conversation.lastMessage.id } )
+            io.emit( `message.seen.${ conversation.id }`, message )
         }
 
     }
