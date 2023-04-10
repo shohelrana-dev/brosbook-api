@@ -7,7 +7,6 @@ import cors from 'cors'
 import path from "path"
 import cookieParser from "cookie-parser"
 import http from "http"
-import cron from "node-cron"
 
 //env config
 dotenv.config()
@@ -53,10 +52,5 @@ app.use( routes )
 // handle error
 app.use( notFoundMiddleware )
 app.use( errorMiddleware )
-
-//the server is alive every 14 minutes for render.app deployment
-cron.schedule( '*/14 * * * *', () => {
-    console.log( 'Run every 14 minutes to make the server live.' )
-} )
 
 export { server }
