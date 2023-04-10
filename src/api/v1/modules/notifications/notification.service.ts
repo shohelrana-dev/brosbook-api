@@ -60,26 +60,30 @@ export default class NotificationService {
         io.emit( `notification.unread.count.${ auth.user.id }`, 0 )
     }
 
-    async create( payload: { initiatorId: string, recipientId: string, postId?: string, commentId?: string, type: NotificationTypes } ): Promise<Notification>{
-        if( ! payload ) throw new BadRequestException( 'Create notification payload is empty.' )
+    async create( data: { recipient: User, post?: Post, comment?: Comment, type: NotificationTypes }, auth: Auth ): Promise<Notification>{
+        if( ! data ) throw new BadRequestException( 'Create notification payload is empty.' )
 
-        const isSameUserAndNotNeedNotification = payload.recipientId === payload.initiatorId
+        const { recipient, type, post, comment } = data
+        const initiator                          = auth.user
+
+        const isSameUserAndNotNeedNotification = recipient.id === initiator.id
         if( isSameUserAndNotNeedNotification ) return
 
         const notification     = new Notification()
-        notification.type      = payload.type
-        notification.initiator = { id: payload.initiatorId } as User
-        notification.recipient = { id: payload.recipientId } as User
-        notification.post      = { id: payload.postId } as Post
-        notification.comment   = { id: payload.commentId } as Comment
+        notification.type      = type
+        notification.initiator = initiator
+        notification.recipient = recipient
+        notification.post      = post
+        notification.comment   = comment
         await this.repository.save( notification )
 
         const recipientUnreadNotificationCount = await this.repository.countBy( {
-            recipient: { id: payload.recipientId },
+            recipient: { id: recipient.id },
             readAt: IsNull()
         } )
 
-        io.emit( `notification.unread.count.${ payload.recipientId }`, recipientUnreadNotificationCount )
+        io.emit( `notification.new.${ recipient.id }`, notification )
+        io.emit( `notification.unread.count.${ recipient.id }`, recipientUnreadNotificationCount )
 
         return notification
     }

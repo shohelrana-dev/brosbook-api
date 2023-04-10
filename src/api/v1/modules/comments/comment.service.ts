@@ -57,12 +57,11 @@ export default class CommentService {
         this.updatePostCommentsCount( post.id )
 
         this.notificationService.create( {
-            initiatorId: auth.user.id,
-            recipientId: post.author.id,
+            recipient: post.author,
             type: NotificationTypes.COMMENTED_POST,
-            postId,
-            commentId: comment.id
-        } )
+            post,
+            comment
+        }, auth )
 
         return comment
     }
@@ -109,12 +108,11 @@ export default class CommentService {
         comment.likesCount    = Number( comment.likesCount ) + 1
 
         this.notificationService.create( {
-            initiatorId: auth.user.id,
-            recipientId: comment.author.id,
+            recipient: comment.author,
             type: NotificationTypes.LIKED_COMMENT,
-            postId: comment.post.id,
-            commentId
-        } )
+            post: comment.post,
+            comment
+        }, auth )
 
         return comment
     }

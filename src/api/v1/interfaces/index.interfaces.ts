@@ -1,11 +1,7 @@
 import User from "@entities/User"
 
 export interface Auth {
-    user?: {
-        id: string,
-        username: string,
-        email: string
-    }
+    user?: User
     isAuthenticated: boolean
 }
 

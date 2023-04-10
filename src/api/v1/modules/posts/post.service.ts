@@ -178,11 +178,10 @@ export default class PostService {
         post.likesCount    = Number( post.likesCount ) + 1
 
         this.notificationService.create( {
-            initiatorId: auth.user.id,
-            recipientId: post.author.id,
+            recipient: post.author,
             type: NotificationTypes.LIKED_POST,
-            postId
-        } )
+            post
+        }, auth )
 
         return post
     }

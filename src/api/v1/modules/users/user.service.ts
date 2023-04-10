@@ -322,10 +322,9 @@ export default class UserService {
         targetUser.isViewerFollow = true
 
         this.notificationService.create( {
-            initiatorId: auth.user.id,
-            recipientId: targetUserId,
+            recipient: targetUser,
             type: NotificationTypes.FOLLOWED
-        } )
+        }, auth )
 
         return targetUser
     }

@@ -15,7 +15,7 @@ import { paginateMeta } from "@utils/paginateMeta"
 import MediaService from "@services/media.service"
 import Media, { MediaSource } from "@entities/Media"
 import { Brackets, IsNull } from "typeorm"
-import message from "@entities/Message";
+import message from "@entities/Message"
 
 export default class ConversationService {
     public readonly repository         = appDataSource.getRepository( Conversation )
