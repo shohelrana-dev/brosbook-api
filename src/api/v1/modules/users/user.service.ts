@@ -18,6 +18,7 @@ import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
 import { Brackets, In } from "typeorm"
 import fetch from "cross-fetch"
+import InternalServerException from "@exceptions/InternalServerException"
 
 
 export default class UserService {
@@ -37,8 +38,6 @@ export default class UserService {
         user.username  = userData.username
         user.password  = userData.password
         await this.repository.save( user )
-
-        await this.profileRepository.create( { user } ).save()
 
         return user
     }
@@ -69,26 +68,29 @@ export default class UserService {
 
         if( user ) return user
 
-        //create user
-        user           = new User()
-        user.firstName = tokenPayload.given_name
-        user.lastName  = tokenPayload.family_name
-        user.email     = tokenPayload.email
-        user.password  = uuid()
-        user           = await this.repository.save( user )
+        try {
+            //create user
+            user           = new User()
+            user.firstName = tokenPayload.given_name
+            user.lastName  = tokenPayload.family_name || tokenPayload.given_name
+            user.email     = tokenPayload.email
+            user.password  = uuid()
+            await this.repository.save( user )
 
-        //save photo
-        user.avatar = await this.mediaService.save( {
-            file: Buffer.from( await ( await fetch( tokenPayload.picture ) ).arrayBuffer() ),
-            source: MediaSource.AVATAR,
-            creator: user
-        } )
+            //save photo
+            user.avatar = await this.mediaService.save( {
+                file: Buffer.from( await ( await fetch( tokenPayload.picture ) ).arrayBuffer() ),
+                source: MediaSource.AVATAR,
+                creator: { id: user.id } as User
+            } )
 
-        await this.repository.save( user )
+            await this.repository.save( user )
 
-        await this.profileRepository.create( { user } ).save()
-
-        return user
+            return user
+        } catch ( err ) {
+            console.log( err )
+            throw new InternalServerException( 'Failed to create user.' );
+        }
     }
 
     public async getCurrentUser( auth: Auth ){

@@ -141,7 +141,7 @@ export default class PostService {
 
         const relationships = await Relationship.findBy( { follower: { id: auth.user.id } } )
 
-        let followingAuthorIds = relationships.map( rel => rel.following.id )
+        const followingAuthorIds = relationships.map( rel => rel.following.id )
 
         const [posts, count] = await this.repository
             .createQueryBuilder( 'post' )
@@ -149,7 +149,7 @@ export default class PostService {
             .leftJoinAndSelect( 'author.avatar', 'avatar' )
             .leftJoinAndSelect( 'post.image', 'image' )
             .where( 'author.id != :authorId', { authorId: auth.user.id } )
-            .andWhere( 'author.id IN (:authorIds)', { authorIds: followingAuthorIds } )
+            .andWhere( 'author.id IN (:authorIds)', { authorIds: followingAuthorIds.length === 0 ? null : followingAuthorIds } )
             .orderBy( 'post.createdAt', 'DESC' )
             .skip( skip )
             .take( limit )

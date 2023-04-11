@@ -1,4 +1,5 @@
 import {
+    AfterInsert,
     AfterLoad,
     BeforeInsert,
     Column,
@@ -82,6 +83,11 @@ class User extends AbstractEntity {
         if( ! this.avatar ){
             this.avatar = { url: `${ process.env.SERVER_URL }/avatar.png` } as Media
         }
+    }
+
+    @AfterInsert()
+    createProfile(){
+        Profile.create( { user: { id: this.id } } ).save()
     }
 
     async setViewerProperties( auth: Auth ): Promise<User>{

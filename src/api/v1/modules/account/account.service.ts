@@ -22,6 +22,7 @@ export default class AccountService {
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
         const profile     = await Profile.findOneBy( { user: { id: user.id } } )
+
         profile.bio       = bio
         profile.phone     = phone
         profile.location  = location
