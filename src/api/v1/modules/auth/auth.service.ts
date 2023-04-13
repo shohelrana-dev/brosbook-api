@@ -30,12 +30,12 @@ class AuthService {
 
         const { username, password } = userData
 
-        const user = await this.userService.repository.findOne( {
+        const user = await this.userService.userRepository.findOne( {
             where: [
                 { email: username },
                 { username }
             ],
-            select: selectAllColumns( this.userService.repository )
+            select: selectAllColumns( this.userService.userRepository )
         } )
 
         if( ! user ) throw new BadRequestException( 'User not found with the email or username.' )
@@ -78,12 +78,12 @@ class AuthService {
             throw new BadRequestException( 'Invalid token.' )
         }
 
-        let user = await this.userService.repository.findOneBy( { email: email } )
+        let user = await this.userService.userRepository.findOneBy( { email: email } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
         user.password = await argon2.hash( password )
-        user          = await this.userService.repository.save( user )
+        user          = await this.userService.userRepository.save( user )
         delete user.password
 
         return user
@@ -99,7 +99,7 @@ class AuthService {
             throw new BadRequestException( 'Invalid token.' )
         }
 
-        let user = await this.userService.repository.findOneBy( { email } )
+        let user = await this.userService.userRepository.findOneBy( { email } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
@@ -108,14 +108,14 @@ class AuthService {
         }
 
         user.emailVerifiedAt = new Date( Date.now() ).toISOString()
-        user                 = await this.userService.repository.save( user )
+        user                 = await this.userService.userRepository.save( user )
         delete user.password
 
         return user
     }
 
     public async resendEmailVerificationLink( email: string ){
-        const user = await this.userService.repository.findOneBy( { email } )
+        const user = await this.userService.userRepository.findOneBy( { email } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 

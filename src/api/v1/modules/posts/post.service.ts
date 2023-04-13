@@ -6,19 +6,20 @@ import { paginateMeta } from "@utils/paginateMeta"
 import { Auth, ListResponse, PostsQueryParams } from "@interfaces/index.interfaces"
 import { MediaSource } from "@entities/Media"
 import NotFoundException from "@exceptions/NotFoundException"
-import Relationship from "@entities/Relationship"
 import BadRequestException from "@exceptions/BadRequestException"
 import MediaService from "@services/media.service"
 import User from "@entities/User"
 import { appDataSource } from "@config/data-source"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
+import UserService from "@modules/users/user.service"
 
 export default class PostService {
-    public readonly repository          = appDataSource.getRepository( Post )
+    public readonly postRepository      = appDataSource.getRepository( Post )
     public readonly likeRepository      = appDataSource.getRepository( PostLike )
     public readonly mediaService        = new MediaService()
     public readonly notificationService = new NotificationService()
+    public readonly userService         = new UserService()
 
     public async create( postData: { body?: string, image: UploadedFile }, auth: Auth ): Promise<Post>{
         if( isEmpty( postData ) ) throw new BadRequestException( 'Post data is empty.' )
@@ -39,7 +40,7 @@ export default class PostService {
             post.image  = savedImage
             post.body   = body
 
-            return await this.repository.save( post )
+            return await this.postRepository.save( post )
         }
 
         //save post
@@ -47,17 +48,17 @@ export default class PostService {
         post.author = auth.user as User
         post.body   = body
 
-        return await this.repository.save( post )
+        return await this.postRepository.save( post )
     }
 
     public async getPostById( postId: string, auth: Auth ): Promise<Post>{
         if( ! postId ) throw new BadRequestException( "Post id is empty." )
 
-        const post = await this.repository.findOneBy( { id: postId } )
+        const post = await this.postRepository.findOneBy( { id: postId } )
 
         if( ! post ) throw new NotFoundException( 'Post doesn\'t exists.' )
 
-        await post.setViewerProperties( auth )
+        await this.formatPost( post, auth )
 
         return post
     }
@@ -65,11 +66,11 @@ export default class PostService {
     public async delete( postId: string ): Promise<Post>{
         if( ! postId ) throw new BadRequestException( "Post id is empty." )
 
-        const post = await this.repository.findOneBy( { id: postId } )
+        const post = await this.postRepository.findOneBy( { id: postId } )
 
         if( ! post ) throw new NotFoundException( 'Post doesn\'t exists.' )
 
-        await this.repository.delete( { id: post.id } )
+        await this.postRepository.remove( post )
 
         if( post.image ){
             this.mediaService.delete( post.image.id )
@@ -78,7 +79,7 @@ export default class PostService {
         return post
     }
 
-    public async getMany( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
+    public async getPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
         if( params.userId ){
             return await this.getUserPosts( params, auth )
         }
@@ -87,7 +88,7 @@ export default class PostService {
         const limit = params.limit || 6
         const skip  = limit * ( page - 1 )
 
-        const [posts, count] = await this.repository
+        const [posts, count] = await this.postRepository
             .createQueryBuilder( 'post' )
             .leftJoinAndSelect( 'post.author', 'author' )
             .leftJoinAndSelect( 'author.avatar', 'avatar' )
@@ -97,9 +98,9 @@ export default class PostService {
             .take( limit )
             .getManyAndCount()
 
-        const formattedPosts = await Promise.all( posts.map( post => post.setViewerProperties( auth ) ) )
+        await this.formatPosts( posts, auth )
 
-        return { items: formattedPosts, ...paginateMeta( count, page, limit ) }
+        return { items: posts, ...paginateMeta( count, page, limit ) }
     }
 
     public async getUserPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
@@ -113,7 +114,7 @@ export default class PostService {
         const user = await User.findOneBy( { id: userId } )
         if( ! user ) throw new BadRequestException( "User doesn't exists." )
 
-        const [posts, count] = await this.repository
+        const [posts, count] = await this.postRepository
             .createQueryBuilder( 'post' )
             .leftJoinAndSelect( 'post.author', 'author' )
             .leftJoinAndSelect( 'author.avatar', 'avatar' )
@@ -124,46 +125,42 @@ export default class PostService {
             .take( limit )
             .getManyAndCount()
 
-        const formattedPosts = await Promise.all( posts.map( ( post => post.setViewerProperties( auth ) ) ) )
+        await this.formatPosts( posts, auth )
 
-        return { items: formattedPosts, ...paginateMeta( count, page, limit ) }
+        return { items: posts, ...paginateMeta( count, page, limit ) }
     }
 
 
     public async getFeedPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
         if( ! auth.isAuthenticated ){
-            return this.getMany( params, auth )
+            return this.getPosts( params, auth )
         }
 
         const page  = params.page || 1
         const limit = params.limit || 6
         const skip  = limit * ( page - 1 )
 
-        const relationships = await Relationship.findBy( { follower: { id: auth.user.id } } )
-
-        const followingAuthorIds = relationships.map( rel => rel.following.id )
-
-        const [posts, count] = await this.repository
+        const [posts, count] = await this.postRepository
             .createQueryBuilder( 'post' )
             .leftJoinAndSelect( 'post.author', 'author' )
+            .leftJoin( 'author.followers', 'follower' )
             .leftJoinAndSelect( 'author.avatar', 'avatar' )
             .leftJoinAndSelect( 'post.image', 'image' )
-            .where( 'author.id != :authorId', { authorId: auth.user.id } )
-            .andWhere( 'author.id IN (:authorIds)', { authorIds: followingAuthorIds.length === 0 ? null : followingAuthorIds } )
+            .where( 'follower.id = :followerId', { followerId: auth.user.id } )
             .orderBy( 'post.createdAt', 'DESC' )
             .skip( skip )
             .take( limit )
             .getManyAndCount()
 
-        const formattedPosts = await Promise.all( posts.map( post => post.setViewerProperties( auth ) ) )
+        await this.formatPosts( posts, auth )
 
-        return { items: formattedPosts, ...paginateMeta( count, page, limit ) }
+        return { items: posts, ...paginateMeta( count, page, limit ) }
     }
 
     public async like( postId: string, auth: Auth ): Promise<Post>{
         if( ! postId ) throw new BadRequestException( "Post id is empty." )
 
-        const post = await this.repository.findOneBy( { id: postId } )
+        const post = await this.postRepository.findOneBy( { id: postId } )
 
         if( ! post ) throw new BadRequestException( 'Post doesn\'t exists.' )
 
@@ -189,7 +186,7 @@ export default class PostService {
     public async unlike( postId: string, auth: Auth ): Promise<Post>{
         if( ! postId ) throw new BadRequestException( "Post id is empty." )
 
-        const post = await this.repository.findOneBy( { id: postId } )
+        const post = await this.postRepository.findOneBy( { id: postId } )
 
         if( ! post ) throw new BadRequestException( 'Post doesn\'t exists.' )
 
@@ -205,7 +202,31 @@ export default class PostService {
 
     private updatePostLikesCount( post: Post ){
         this.likeRepository.countBy( { post: { id: post.id } } ).then( ( count ) => {
-            this.repository.update( { id: post.id }, { likesCount: count } )
+            this.postRepository.update( { id: post.id }, { likesCount: count } )
         } )
+    }
+
+    async formatPost( post: Post, auth: Auth ): Promise<Post>{
+        if( auth.isAuthenticated ){
+            const like = await PostLike.findOneBy( { user: { id: auth.user.id }, post: { id: post.id } } )
+
+            post.isViewerLiked = Boolean( like )
+        } else{
+            post.isViewerLiked = false
+        }
+
+        if( post.author ){
+            await this.userService.formatUser( post.author, auth )
+        }
+
+        return post
+    }
+
+    async formatPosts( posts: Post[], auth: Auth ): Promise<Post[]>{
+        for ( const post of posts ) {
+            await this.formatPost( post, auth )
+        }
+
+        return posts
     }
 }

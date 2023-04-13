@@ -1,5 +1,4 @@
 import { UploadedFile } from "express-fileupload"
-import Relationship from "@entities/Relationship"
 import User from "@entities/User"
 import { paginateMeta } from "@utils/paginateMeta"
 import { appDataSource } from "@config/data-source"
@@ -22,11 +21,10 @@ import InternalServerException from "@exceptions/InternalServerException"
 
 
 export default class UserService {
-    public readonly repository             = appDataSource.getRepository( User )
-    public readonly profileRepository      = appDataSource.getRepository( Profile )
-    public readonly relationshipRepository = appDataSource.getRepository( Relationship )
-    public readonly mediaService           = new MediaService()
-    public readonly notificationService    = new NotificationService()
+    public readonly userRepository      = appDataSource.getRepository( User )
+    public readonly profileRepository   = appDataSource.getRepository( Profile )
+    public readonly mediaService        = new MediaService()
+    public readonly notificationService = new NotificationService()
 
     public async create( userData: CreateUserDTO ): Promise<User>{
         if( isEmpty( userData ) ) throw new BadRequestException( 'User data is empty.' )
@@ -37,7 +35,7 @@ export default class UserService {
         user.email     = userData.email
         user.username  = userData.username
         user.password  = userData.password
-        await this.repository.save( user )
+        await this.userRepository.save( user )
 
         return user
     }
@@ -58,24 +56,25 @@ export default class UserService {
             throw new UnauthorizedException( 'Invalid access token.' )
         }
 
-        let user = await this.repository.findOneBy( { email: tokenPayload.email } )
+        let user = await this.userRepository.findOneBy( { email: tokenPayload.email } )
 
         //make user verified
         if( user && ! user.hasEmailVerified ){
             user.emailVerifiedAt = new Date( Date.now() ).toISOString()
-            await this.repository.save( user )
+            await this.userRepository.save( user )
         }
 
         if( user ) return user
 
         try {
             //create user
-            user           = new User()
-            user.firstName = tokenPayload.given_name
-            user.lastName  = tokenPayload.family_name || tokenPayload.given_name
-            user.email     = tokenPayload.email
-            user.password  = uuid()
-            await this.repository.save( user )
+            user                 = new User()
+            user.firstName       = tokenPayload.given_name
+            user.lastName        = tokenPayload.family_name || tokenPayload.given_name
+            user.email           = tokenPayload.email
+            user.emailVerifiedAt = new Date( Date.now() ).toISOString()
+            user.password        = uuid()
+            await this.userRepository.save( user )
 
             //save photo
             user.avatar = await this.mediaService.save( {
@@ -84,33 +83,32 @@ export default class UserService {
                 creator: { id: user.id } as User
             } )
 
-            await this.repository.save( user )
+            await this.userRepository.save( user )
 
             return user
         } catch ( err ) {
-            console.log( err )
-            throw new InternalServerException( 'Failed to create user.' );
+            throw new InternalServerException( 'Failed to create user.' )
         }
     }
 
     public async getCurrentUser( auth: Auth ){
-        return await this.repository.findOneOrFail( {
+        return await this.userRepository.findOneOrFail( {
             where: { id: auth.user.id },
-            relations: { profile: true }
+            relations: ["profile"]
         } )
     }
 
     public async getUserById( userId: string, auth: Auth ): Promise<User>{
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
-        const user = await this.repository.findOne( {
+        const user = await this.userRepository.findOne( {
             where: { id: userId },
-            relations: { profile: true }
+            relations: ["profile"]
         } )
 
         if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
 
-        await user.setViewerProperties( auth )
+        await this.formatUser( user, auth )
 
         return user
     }
@@ -118,14 +116,14 @@ export default class UserService {
     public async getUserByUsername( username: string, auth: Auth ): Promise<User>{
         if( ! username ) throw new BadRequestException( "Username is empty." )
 
-        const user = await this.repository.findOne( {
+        const user = await this.userRepository.findOne( {
             where: { username },
             relations: { profile: true }
         } )
 
         if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
 
-        await user.setViewerProperties( auth )
+        await this.formatUser( user, auth )
 
         return user
     }
@@ -133,13 +131,23 @@ export default class UserService {
     public async getFollowersCount( userId: string ): Promise<number>{
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
-        return await Relationship.countBy( { following: { id: userId } } )
+        //followers count
+        return await this.userRepository
+            .createQueryBuilder( "user" )
+            .leftJoin( "user.followings", "following" )
+            .where( "following.id = :followingId", { followingId: userId } )
+            .getCount()
     }
 
     public async getFollowingsCount( userId: string ): Promise<number>{
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
-        return await Relationship.countBy( { follower: { id: userId } } )
+        //followings count
+        return await this.userRepository
+            .createQueryBuilder( "user" )
+            .leftJoin( "user.followers", "follower" )
+            .where( "follower.id = :followerId", { followerId: userId } )
+            .getCount()
     }
 
     public async getUserMediaList( userId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
@@ -149,7 +157,7 @@ export default class UserService {
 
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
-        const user = await this.repository.findOneBy( { id: userId } )
+        const user = await this.userRepository.findOneBy( { id: userId } )
 
         if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
 
@@ -166,27 +174,28 @@ export default class UserService {
     }
 
     public async searchUsers( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>>{
-        const key   = params.key
+        const q     = params.q
         const page  = params.page || 1
         const limit = params.limit || 16
         const skip  = limit * ( page - 1 )
 
-        const [users, count] = await this.repository
+        const [users, count] = await this.userRepository
             .createQueryBuilder( 'user' )
             .leftJoinAndSelect( 'user.avatar', 'avatar' )
             .where( 'user.id != :userId', { userId: auth.user.id } )
             .andWhere( new Brackets( ( qb ) => {
-                qb.where( 'user.firstName LIKE :key', { key: `%${ key }%` } )
-                qb.orWhere( 'user.lastName LIKE :key', { key: `%${ key }%` } )
+                qb.where( 'user.firstName LIKE :q', { q: `%${ q }%` } )
+                qb.orWhere( 'user.lastName LIKE :q', { q: `%${ q }%` } )
+                qb.orWhere( 'user.username LIKE :q', { q: `%${ q }%` } )
             } ) )
             .orderBy( 'user.createdAt', 'DESC' )
             .skip( skip )
             .take( limit )
             .getManyAndCount()
 
-        const formattedUsers = await Promise.all( users.map( user => user.setViewerProperties( auth ) ) )
+        await this.formatUsers( users, auth )
 
-        return { items: formattedUsers, ...paginateMeta( count, page, limit ) }
+        return { items: users, ...paginateMeta( count, page, limit ) }
     }
 
     public async getSuggestions( params: ListQueryParams, auth: Auth ): Promise<ListResponse<User>>{
@@ -194,34 +203,29 @@ export default class UserService {
         const limit = params.limit || 6
         const skip  = limit * ( page - 1 )
 
-        const currentUserFollowings = await this.relationshipRepository
-            .createQueryBuilder( 'relationship' )
-            .leftJoin( 'relationship.follower', 'follower' )
-            .leftJoin( 'relationship.following', 'following' )
-            .where( 'follower.id = :userId', { userId: auth.user.id } )
-            .select( 'relationship.id' )
-            .addSelect( 'following.id' )
-            .getMany()
+        const user = await this.userRepository.findOne( {
+            where: { id: auth.user.id },
+            relations: ['followings']
+        } )
 
-        let currentUserFollowingIds = currentUserFollowings.map( rel => rel.following.id )
-        currentUserFollowingIds     = isEmpty( currentUserFollowings ) ? [""] : currentUserFollowingIds
+        const followingIds = ! isEmpty( user.followings ) ? user.followings.map( user => user.id ) : ['']
 
-        const [users, count] = await this.repository
+        // Retrieve users not followed by the current user
+        const [users, count] = await this.userRepository
             .createQueryBuilder( 'user' )
-            .leftJoin( 'user.followings', 'following' )
-            .leftJoin( 'user.followers', 'follower' )
             .leftJoinAndSelect( 'user.avatar', 'avatar' )
             .leftJoinAndSelect( 'user.profile', 'profile' )
             .where( 'user.id != :userId', { userId: auth.user.id } )
-            .andWhere( 'user.id NOT IN (:...userIds)', { userIds: currentUserFollowingIds } )
+            .andWhere( 'user.id NOT IN (:...followingIds)', { followingIds } )
             .orderBy( 'user.createdAt', 'DESC' )
             .skip( skip )
             .take( limit )
             .getManyAndCount()
 
-        const formattedUsers = await Promise.all( users.map( user => user.setViewerProperties( auth ) ) )
 
-        return { items: formattedUsers, ...paginateMeta( count, page, limit ) }
+        await this.formatUsers( users, auth )
+
+        return { items: users, ...paginateMeta( count, page, limit ) }
     }
 
     public async getFollowers( userId: string, params: ListQueryParams, auth: Auth ): Promise<ListResponse<User>>{
@@ -231,24 +235,17 @@ export default class UserService {
         const limit = params.limit || 10
         const skip  = limit * ( page - 1 )
 
-        const [relationships, count] = await this.relationshipRepository
-            .createQueryBuilder( 'relationship' )
-            .leftJoinAndSelect( 'relationship.follower', 'follower' )
-            .leftJoinAndSelect( 'relationship.following', 'following' )
-            .leftJoinAndSelect( 'follower.avatar', 'followerAvatar' )
-            .leftJoinAndSelect( 'following.avatar', 'followingAvatar' )
-            .leftJoinAndSelect( 'follower.profile', 'followerProfile' )
-            .leftJoinAndSelect( 'following.profile', 'followingProfile' )
-            .where( 'following.id = :followingId', { followingId: userId } )
-            .take( limit )
+        const [followers, count] = await this.userRepository
+            .createQueryBuilder( 'user' )
+            .leftJoin( 'user.followings', 'following' )
+            .where( 'following.id = :userId', { userId } )
             .skip( skip )
+            .take( limit )
             .getManyAndCount()
 
-        const followers = relationships.map( rel => rel.follower )
+        await this.formatUsers( followers, auth )
 
-        const formattedFollowers = await Promise.all( followers.map( user => user.setViewerProperties( auth ) ) )
-
-        return { items: formattedFollowers, ...paginateMeta( count, page, limit ) }
+        return { items: followers, ...paginateMeta( count, page, limit ) }
     }
 
 
@@ -259,30 +256,23 @@ export default class UserService {
         const limit = params.limit || 10
         const skip  = limit * ( page - 1 )
 
-        const [relationships, count] = await this.relationshipRepository
-            .createQueryBuilder( 'relationship' )
-            .leftJoinAndSelect( 'relationship.following', 'following' )
-            .leftJoinAndSelect( 'relationship.follower', 'follower' )
-            .leftJoinAndSelect( 'follower.avatar', 'followerAvatar' )
-            .leftJoinAndSelect( 'following.avatar', 'followingAvatar' )
-            .leftJoinAndSelect( 'follower.profile', 'followerProfile' )
-            .leftJoinAndSelect( 'following.profile', 'followingProfile' )
-            .where( 'follower.id = :followerId', { followerId: userId } )
-            .take( limit )
+        const [followings, count] = await this.userRepository
+            .createQueryBuilder( 'user' )
+            .leftJoin( 'user.followers', 'follower' )
+            .where( 'follower.id = :userId', { userId } )
             .skip( skip )
+            .take( limit )
             .getManyAndCount()
 
-        const followings = relationships.map( rel => rel.following )
+        await this.formatUsers( followings, auth )
 
-        const formattedFollowings = await Promise.all( followings.map( user => user.setViewerProperties( auth ) ) )
-
-        return { items: formattedFollowings, ...paginateMeta( count, page, limit ) }
+        return { items: followings, ...paginateMeta( count, page, limit ) }
     }
 
     public async changeAvatar( avatar: UploadedFile, auth: Auth ){
         if( ! avatar ) throw new BadRequestException( "Avatar is empty." )
 
-        const user = await this.repository.findOneBy( { id: auth.user.id } )
+        const user = await this.userRepository.findOneBy( { id: auth.user.id } )
 
         user.avatar = await this.mediaService.save( {
             file: avatar.data,
@@ -290,13 +280,13 @@ export default class UserService {
             source: MediaSource.AVATAR
         } )
 
-        return await this.repository.save( user )
+        return await this.userRepository.save( user )
     }
 
     public async changeCoverPhoto( coverPhoto: UploadedFile, auth: Auth ): Promise<User>{
         if( ! coverPhoto ) throw new BadRequestException( "Cover photo is empty." )
 
-        const user    = await this.repository.findOneBy( { id: auth.user.id } )
+        const user    = await this.userRepository.findOneBy( { id: auth.user.id } )
         const profile = await this.profileRepository.findOneBy( { user: { id: auth.user.id } } )
 
         if( ! user || ! profile ) throw new BadRequestException( "User does not exists." )
@@ -315,11 +305,16 @@ export default class UserService {
     public async follow( targetUserId: string, auth: Auth ): Promise<User>{
         if( ! targetUserId ) throw new BadRequestException( 'Target user id is empty.' )
 
-        const targetUser = await this.repository.findOneBy( { id: targetUserId } )
+        const targetUser = await this.userRepository.findOneBy( { id: targetUserId } )
 
         if( ! targetUser ) throw new BadRequestException( 'Target user does not exists.' )
 
-        await this.relationshipRepository.create( { follower: { id: auth.user.id }, following: targetUser } ).save()
+        try {
+            targetUser.followers = [auth.user]
+            await this.userRepository.save( targetUser )
+        } catch ( e ) {
+            console.log( e.message )
+        }
 
         targetUser.isViewerFollow = true
 
@@ -334,11 +329,15 @@ export default class UserService {
     public async unfollow( targetUserId: string, auth: Auth ): Promise<User>{
         if( ! targetUserId ) throw new BadRequestException( 'Target user id is empty.' )
 
-        const targetUser = await this.repository.findOneBy( { id: targetUserId } )
+        const targetUser = await this.userRepository.findOneBy( { id: targetUserId } )
 
         if( ! targetUser ) throw new BadRequestException( 'Target user does not exists.' )
 
-        await this.relationshipRepository.delete( { follower: { id: auth.user.id }, following: { id: targetUser.id } } )
+        await this.userRepository
+            .createQueryBuilder()
+            .relation( User, 'followings' )
+            .of( auth.user.id )
+            .remove( targetUserId )
 
         targetUser.isViewerFollow = false
 
@@ -348,13 +347,13 @@ export default class UserService {
     public async makeUserActive( userId: string ): Promise<User>{
         if( ! userId ) throw new BadRequestException( 'User id is empty.' )
 
-        const user = await this.repository.findOneBy( { id: userId } )
+        const user = await this.userRepository.findOneBy( { id: userId } )
 
         if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
         user.active = 1
 
-        await this.repository.save( user )
+        await this.userRepository.save( user )
 
         return user
     }
@@ -362,14 +361,43 @@ export default class UserService {
     public async makeUserInactive( userId: string ): Promise<User>{
         if( ! userId ) throw new BadRequestException( 'User id is empty.' )
 
-        const user = await this.repository.findOneBy( { id: userId } )
+        const user = await this.userRepository.findOneBy( { id: userId } )
 
         if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
         user.active = 0
 
-        await this.repository.save( user )
+        await this.userRepository.save( user )
 
         return user
+    }
+
+    async formatUser( user: User, auth: Auth ): Promise<User>{
+        user.isViewerFollow = await this.isCurrentUserFollow( user, auth )
+
+        return user
+    }
+
+    async formatUsers( users: User[], auth: Auth ): Promise<User[]>{
+        for ( const user of users ) {
+            await this.formatUser( user, auth )
+        }
+
+        return users
+    }
+
+    async isCurrentUserFollow( followUser: User, auth: Auth ): Promise<boolean>{
+        if( ! auth.isAuthenticated ) return false
+
+        // Count the number of followings records that match the current user ID and follow user ID
+        const count = await this.userRepository
+            .createQueryBuilder( 'user' )
+            .leftJoinAndSelect( 'user.followings', 'following' )
+            .where( 'user.id = :currentUserId', { currentUserId: auth.user.id } )
+            .andWhere( 'following.id = :followUserId', { followUserId: followUser.id } )
+            .getCount()
+
+        // Return true if count is greater than zero, indicating that the current user is following the follow user
+        return count > 0
     }
 }

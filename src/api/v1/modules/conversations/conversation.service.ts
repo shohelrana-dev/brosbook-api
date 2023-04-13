@@ -18,21 +18,21 @@ import { Brackets, IsNull } from "typeorm"
 import message from "@entities/Message"
 
 export default class ConversationService {
-    public readonly repository         = appDataSource.getRepository( Conversation )
-    public readonly messageRepository  = appDataSource.getRepository( Message )
-    public readonly reactionRepository = appDataSource.getRepository( Reaction )
-    public readonly userService        = new UserService()
-    public readonly mediaService       = new MediaService()
+    public readonly conversationRepository = appDataSource.getRepository( Conversation )
+    public readonly messageRepository      = appDataSource.getRepository( Message )
+    public readonly reactionRepository     = appDataSource.getRepository( Reaction )
+    public readonly userService            = new UserService()
+    public readonly mediaService           = new MediaService()
 
     public async createConversation( participantId: string, auth: Auth ): Promise<Conversation>{
         if( ! participantId ) throw new BadRequestException( 'Participant id is empty.' )
 
-        const user        = await this.userService.repository.findOneBy( { id: auth.user.id } )
-        const participant = await this.userService.repository.findOneBy( { id: participantId } )
+        const user        = await this.userService.userRepository.findOneBy( { id: auth.user.id } )
+        const participant = await this.userService.userRepository.findOneBy( { id: participantId } )
 
         if( ! participant ) throw new NotFoundException( 'Participant user doesn\'t exists.' )
 
-        const findConversation = await this.repository.findOneBy( [
+        const findConversation = await this.conversationRepository.findOneBy( [
             { user1: { id: user.id }, user2: { id: participant.id } },
             { user1: { id: participant.id }, user2: { id: user.id } }
         ] )
@@ -42,7 +42,7 @@ export default class ConversationService {
         const conversation = new Conversation()
         conversation.user1 = user
         conversation.user2 = participant
-        await this.repository.save( conversation )
+        await this.conversationRepository.save( conversation )
 
         return conversation
     }
@@ -50,7 +50,7 @@ export default class ConversationService {
     public async getConversationById( conversationId: string, auth: Auth ): Promise<Conversation>{
         if( ! conversationId ) throw new BadRequestException( 'Conversation id is empty.' )
 
-        const conversation = await this.repository
+        const conversation = await this.conversationRepository
             .createQueryBuilder( 'conversation' )
             .leftJoinAndSelect( 'conversation.user1', 'user1' )
             .leftJoinAndSelect( 'conversation.user2', 'user2' )
@@ -70,10 +70,10 @@ export default class ConversationService {
     public async getConversationByParticipantIdOrCreate( participantId: string, auth: Auth ): Promise<Conversation>{
         if( ! participantId ) throw new BadRequestException( 'Participant id is empty.' )
 
-        const participant = await this.userService.repository.findOneBy( { id: participantId } )
+        const participant = await this.userService.userRepository.findOneBy( { id: participantId } )
         if( ! participant ) throw new NotFoundException( 'Participant  doesn\'t exists.' )
 
-        const conversation = await this.repository.findOneBy( [
+        const conversation = await this.conversationRepository.findOneBy( [
             { user1: { id: auth.user.id }, user2: { id: participantId } },
             { user1: { id: participantId }, user2: { id: auth.user.id } }
         ] )
@@ -83,7 +83,7 @@ export default class ConversationService {
         const newConversation = new Conversation()
         newConversation.user1 = auth.user as User
         newConversation.user2 = participant
-        await this.repository.save( newConversation )
+        await this.conversationRepository.save( newConversation )
 
         return this.formatConversation( conversation, auth )
     }
@@ -93,7 +93,7 @@ export default class ConversationService {
         const limit = params.limit || 12
         const skip  = limit * ( page - 1 )
 
-        const [conversations, count] = await this.repository.findAndCount( {
+        const [conversations, count] = await this.conversationRepository.findAndCount( {
             relations: { user1: true, user2: true, lastMessage: true },
             where: [
                 { user1: { id: auth.user.id } },
@@ -110,7 +110,7 @@ export default class ConversationService {
     }
 
     public async getUnreadConversationsCount( userId: string ): Promise<number>{
-        return await this.repository.createQueryBuilder( 'conversation' )
+        return await this.conversationRepository.createQueryBuilder( 'conversation' )
             .innerJoin( "conversation.user1", "user1" )
             .innerJoin( "conversation.user2", "user2" )
             .innerJoin( "conversation.lastMessage", "lastMessage" )
@@ -132,7 +132,7 @@ export default class ConversationService {
         const limit = params.limit || 12
         const skip  = limit * ( page - 1 )
 
-        const conversation = await this.repository.findOneBy( { id: conversationId } )
+        const conversation = await this.conversationRepository.findOneBy( { id: conversationId } )
 
         if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
 
@@ -155,13 +155,13 @@ export default class ConversationService {
 
         if( ! body && ! image ) throw new BadRequestException( 'Message data is empty.' )
 
-        const conversation = await this.repository.findOne( {
+        const conversation = await this.conversationRepository.findOne( {
             where: { id: conversationId },
             relations: ['user1', 'user2']
         } )
         if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
 
-        const sender    = await this.userService.repository.findOneBy( { id: auth.user.id } )
+        const sender    = await this.userService.userRepository.findOneBy( { id: auth.user.id } )
         const recipient = sender.id === conversation.user1.id ? conversation.user2 : conversation.user1
 
         const message        = new Message()
@@ -183,7 +183,7 @@ export default class ConversationService {
         io.emit( `message.new.${ conversation.id }`, message )
 
         conversation.lastMessage = { id: message.id } as Message
-        await this.repository.save( conversation )
+        await this.conversationRepository.save( conversation )
 
         this.getUnreadConversationsCount( recipient.id ).then( ( count ) => {
             if( count > 0 ){
@@ -234,7 +234,7 @@ export default class ConversationService {
     public async seenAllMessages( conversationId: string, auth: Auth ): Promise<void>{
         if( ! conversationId ) throw new BadRequestException( 'Conversation id is empty.' )
 
-        const conversation = await this.repository.findOne( {
+        const conversation = await this.conversationRepository.findOne( {
             where: [
                 { id: conversationId, user1: { id: auth.user.id } },
                 { id: conversationId, user2: { id: auth.user.id } }
@@ -275,7 +275,7 @@ export default class ConversationService {
         const limit = params.limit || 12
         const skip  = limit * ( page - 1 )
 
-        const conversation = await this.repository.findOne( {
+        const conversation = await this.conversationRepository.findOne( {
             where: { id: conversationId },
             relations: { user1: true, user2: true }
         } )

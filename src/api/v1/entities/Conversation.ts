@@ -5,10 +5,10 @@ import Message from "./Message"
 
 @Entity( 'conversations' )
 class Conversation extends AbstractEntity {
-    @ManyToOne( () => User )
+    @ManyToOne( () => User, { onDelete: "CASCADE" } )
     user1: User
 
-    @ManyToOne( () => User )
+    @ManyToOne( () => User, { onDelete: "CASCADE" } )
     user2: User
 
     @OneToMany( () => Message, message => message.conversation )

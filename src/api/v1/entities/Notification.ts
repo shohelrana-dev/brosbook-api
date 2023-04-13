@@ -16,19 +16,19 @@ export class Notification extends AbstractEntity {
     @Column( { type: 'enum', enum: NotificationTypes, nullable: false } )
     type: NotificationTypes
 
-    @ManyToOne( () => Post, {onDelete: "CASCADE"} )
+    @ManyToOne( () => Post, { onDelete: "CASCADE" } )
     post: Post
 
-    @ManyToOne( () => Comment, {onDelete: "CASCADE"} )
+    @ManyToOne( () => Comment, { onDelete: "CASCADE" } )
     comment: Comment
 
     @Column( { type: 'datetime', nullable: true } )
     readAt: string
 
-    @ManyToOne( () => User, { nullable: false } )
+    @ManyToOne( () => User, { nullable: false, onDelete: "CASCADE" } )
     recipient: User
 
-    @ManyToOne( () => User, { eager: true, nullable: false } )
+    @ManyToOne( () => User, { eager: true, nullable: false, onDelete: "CASCADE" } )
     initiator: User
 
     //virtual column

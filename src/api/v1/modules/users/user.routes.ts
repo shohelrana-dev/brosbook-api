@@ -102,7 +102,7 @@ router.get( '/:userId/media', usersController.getUserMediaList )
 router.post( '/follow/:userId', authMiddleware, usersController.follow )
 
 /**
- * @desc Add following
+ * @desc Add follows
  * @route POST /api/api/users/unfollow/:userId
  * @access Private
  */

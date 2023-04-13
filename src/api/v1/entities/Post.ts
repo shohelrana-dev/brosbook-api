@@ -3,14 +3,14 @@ import {
     Column,
     OneToMany,
     ManyToOne,
-    OneToOne, JoinColumn
+    OneToOne,
+    JoinColumn
 } from "typeorm"
 import Comment from "./Comment"
 import User from "./User"
 import PostLike from "./PostLike"
 import { AbstractEntity } from "@entities/AbstractEntity"
 import Media from "@entities/Media"
-import { Auth } from "@interfaces/index.interfaces"
 
 @Entity( 'posts' )
 export default class Post extends AbstractEntity {
@@ -27,7 +27,7 @@ export default class Post extends AbstractEntity {
     @JoinColumn()
     image: Media
 
-    @ManyToOne( () => User, { eager: true, nullable: false } )
+    @ManyToOne( () => User, { eager: true, nullable: false, onDelete: "CASCADE" } )
     author: User
 
     @OneToMany( () => Comment, comment => comment.post )
@@ -38,20 +38,4 @@ export default class Post extends AbstractEntity {
 
     //virtual columns
     isViewerLiked: boolean
-
-    async setViewerProperties( auth: Auth ): Promise<Post>{
-        if( auth.isAuthenticated ){
-            const like = await PostLike.findOneBy( { user: { id: auth.user.id }, post: { id: this.id } } )
-
-            this.isViewerLiked = Boolean( like )
-        } else{
-            this.isViewerLiked = false
-        }
-
-        if( this.author ){
-            await this.author.setViewerProperties( auth )
-        }
-
-        return this
-    }
 }

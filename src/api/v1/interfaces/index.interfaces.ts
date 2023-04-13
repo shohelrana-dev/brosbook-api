@@ -30,14 +30,10 @@ export interface ListQueryParams {
     limit?: number
 }
 
-export interface SearchQueryParams {
-    key: string
-    page?: number
-    limit?: number
+export interface SearchQueryParams extends ListQueryParams {
+    q: string
 }
 
-export interface PostsQueryParams {
+export interface PostsQueryParams extends ListQueryParams {
     userId?: string
-    page?: number
-    limit?: number
 }

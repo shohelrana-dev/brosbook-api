@@ -1,13 +1,13 @@
-import argon2                                                     from "argon2"
-import Profile                                                    from "@entities/Profile"
-import User                                                       from "@entities/User"
-import BadRequestException                                        from "@exceptions/BadRequestException"
-import UnprocessableEntityException                               from "@exceptions/UnprocessableEntityException"
+import argon2 from "argon2"
+import Profile from "@entities/Profile"
+import User from "@entities/User"
+import BadRequestException from "@exceptions/BadRequestException"
+import UnprocessableEntityException from "@exceptions/UnprocessableEntityException"
 import { ChangePasswordDTO, ChangeUsernameDTO, UpdateProfileDTO } from "@modules/account/account.dto"
-import isEmpty                                                    from "is-empty"
-import UserService                                                from "@modules/users/user.service"
-import { Auth }                                                   from "@interfaces/index.interfaces"
-import { selectAllColumns }                                       from "@utils/selectAllColumns"
+import isEmpty from "is-empty"
+import UserService from "@modules/users/user.service"
+import { Auth } from "@interfaces/index.interfaces"
+import { selectAllColumns } from "@utils/selectAllColumns"
 
 export default class AccountService {
     private readonly userService = new UserService()
@@ -17,11 +17,11 @@ export default class AccountService {
 
         const { firstName, lastName, bio, phone, location, birthdate, gender } = userData
 
-        const user = await this.userService.repository.findOneBy( { id: auth.user.id } )
+        const user = await this.userService.userRepository.findOneBy( { id: auth.user.id } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
-        const profile     = await Profile.findOneBy( { user: { id: user.id } } )
+        const profile = await Profile.findOneBy( { user: { id: user.id } } )
 
         profile.bio       = bio
         profile.phone     = phone
@@ -33,7 +33,7 @@ export default class AccountService {
         user.firstName = firstName
         user.lastName  = lastName
         user.profile   = profile
-        await this.userService.repository.save( user )
+        await this.userService.userRepository.save( user )
 
         return user
     }
@@ -43,9 +43,9 @@ export default class AccountService {
 
         const { username, password } = changeUsernameData
 
-        const user = await this.userService.repository.findOne( {
+        const user = await this.userService.userRepository.findOne( {
             where: { id: auth.user.id },
-            select: selectAllColumns( this.userService.repository )
+            select: selectAllColumns( this.userService.userRepository )
         } )
 
         if( ! user ) throw new BadRequestException( "User doesn't exists." )
@@ -55,7 +55,7 @@ export default class AccountService {
         if( ! isPasswordMatching ) throw new UnprocessableEntityException( "Invalid Password." )
 
         user.username = username
-        await this.userService.repository.save( user )
+        await this.userService.userRepository.save( user )
 
         delete user.password
 
@@ -67,9 +67,9 @@ export default class AccountService {
 
         const { currentPassword, newPassword } = changePasswordData
 
-        const user = await this.userService.repository.findOne( {
+        const user = await this.userService.userRepository.findOne( {
             where: { id: auth.user.id },
-            select: selectAllColumns( this.userService.repository )
+            select: selectAllColumns( this.userService.userRepository )
         } )
 
         if( ! user ) throw new BadRequestException( "User doesn't exists." )
@@ -79,7 +79,7 @@ export default class AccountService {
         if( ! isPasswordMatching ) throw new UnprocessableEntityException( "Current password invalid." )
 
         user.password = await argon2.hash( newPassword )
-        await this.userService.repository.save( user )
+        await this.userService.userRepository.save( user )
 
         delete user.password
 

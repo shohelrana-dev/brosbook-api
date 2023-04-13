@@ -3,14 +3,16 @@ import isEmpty from "is-empty"
 import { MediaSource } from "@entities/Media"
 import { appDataSource } from "@config/data-source"
 import { v2 as cloudinary } from "cloudinary"
-import { Auth } from "@interfaces/index.interfaces";
-import User from "@entities/User";
+import { Auth } from "@interfaces/index.interfaces"
+import User from "@entities/User"
 
 cloudinary.config( {
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
     api_secret: process.env.CLOUDINARY_API_SECRET
 } )
+
+export { cloudinary }
 
 interface SaveMedia {
     file: Buffer
@@ -34,14 +36,14 @@ export default class MediaService {
             }, async( err, result ) => {
                 if( err ) reject( err )
 
-                const media     = new Media()
-                media.url       = result.secure_url
-                media.format    = result.format
-                media.name      = result.public_id
-                media.width     = result.width
-                media.height    = result.height
-                media.size      = result.bytes
-                media.source    = source
+                const media   = new Media()
+                media.url     = result.secure_url
+                media.format  = result.format
+                media.name    = result.public_id
+                media.width   = result.width
+                media.height  = result.height
+                media.size    = result.bytes
+                media.source  = source
                 media.creator = creator as User
                 await this.repository.save( media )
 

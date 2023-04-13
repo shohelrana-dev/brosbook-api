@@ -12,7 +12,7 @@ const postController = new PostController( postService )
  * @route GET posts
  * @access Public
  * */
-router.get( '/', postController.getMany )
+router.get( '/', postController.getPosts )
 
 /**
  * @desc create post

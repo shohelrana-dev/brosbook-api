@@ -39,9 +39,9 @@ export default class PostController {
         }
     }
 
-    public getMany = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
+    public getPosts = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
         try {
-            const posts = await this.postService.getMany( req.query, req.auth )
+            const posts = await this.postService.getPosts( req.query, req.auth )
 
             res.json( posts )
         } catch ( err ) {

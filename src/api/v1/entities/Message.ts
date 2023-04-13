@@ -31,7 +31,7 @@ class Message extends AbstractEntity {
     @JoinColumn()
     conversation: Conversation
 
-    @ManyToOne( () => User, { eager: true } )
+    @ManyToOne( () => User, { eager: true} )
     @JoinColumn()
     sender: User
 

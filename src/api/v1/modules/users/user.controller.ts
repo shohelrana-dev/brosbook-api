@@ -143,9 +143,9 @@ export default class UserController {
 
     public follow = async( req: Request, res: Response, next: NextFunction ) => {
         try {
-            const following = await this.usersService.follow( req.params.userId, req.auth )
+            const follows = await this.usersService.follow( req.params.userId, req.auth )
 
-            res.json( following )
+            res.json( follows )
         } catch ( err ) {
             next( err )
         }

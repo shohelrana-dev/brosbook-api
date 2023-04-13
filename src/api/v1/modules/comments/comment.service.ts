@@ -12,7 +12,7 @@ import { NotificationTypes } from "@entities/Notification"
 import ForbiddenException from "@exceptions/ForbiddenException"
 
 export default class CommentService {
-    public readonly repository          = appDataSource.getRepository( Comment )
+    public readonly commentRepository   = appDataSource.getRepository( Comment )
     public readonly likeRepository      = appDataSource.getRepository( CommentLike )
     public readonly postService         = new PostService()
     public readonly notificationService = new NotificationService()
@@ -24,7 +24,7 @@ export default class CommentService {
         const limit = params.limit || 5
         const skip  = limit * ( page - 1 )
 
-        const [comments, count] = await this.repository.findAndCount( {
+        const [comments, count] = await this.commentRepository.findAndCount( {
             where: { post: { id: postId } },
             order: { createdAt: 'DESC' },
             take: limit,
@@ -32,16 +32,16 @@ export default class CommentService {
         } )
 
 
-        const formattedComments = await Promise.all( comments.map( ( comment ) => comment.setViewerProperties( auth ) ) )
+        await this.formatComments( comments, auth )
 
-        return { items: formattedComments, ...paginateMeta( count, page, limit ) }
+        return { items: comments, ...paginateMeta( count, page, limit ) }
     }
 
     public async create( { postId, body }: { body: string, postId: string }, auth: Auth ): Promise<Comment>{
         if( ! postId ) throw new BadRequestException( 'Post id is empty.' )
         if( ! body ) throw new BadRequestException( 'Comment body is empty.' )
 
-        const post = await this.postService.repository.findOneBy( { id: postId } )
+        const post = await this.postService.postRepository.findOneBy( { id: postId } )
         if( ! post ) throw new BadRequestException( 'Post doesn\'t exists.' )
 
         const author = await User.findOneBy( { id: auth.user.id } )
@@ -52,7 +52,7 @@ export default class CommentService {
         comment.author = author
         comment.body   = body
         comment.post   = post
-        await this.repository.save( comment )
+        await this.commentRepository.save( comment )
 
         this.updatePostCommentsCount( post.id )
 
@@ -69,7 +69,7 @@ export default class CommentService {
     public async delete( commentId: string, auth: Auth ): Promise<Comment>{
         if( ! commentId ) throw new BadRequestException( "Comment id is empty." )
 
-        const comment = await this.repository.findOne( {
+        const comment = await this.commentRepository.findOne( {
             where: { id: commentId },
             relations: { post: true }
         } )
@@ -80,7 +80,7 @@ export default class CommentService {
             throw new ForbiddenException( 'You are not owner of the comment.' )
         }
 
-        await this.repository.delete( { id: comment.id } )
+        await this.commentRepository.delete( { id: comment.id } )
 
         this.updatePostCommentsCount( comment.post.id )
 
@@ -90,7 +90,7 @@ export default class CommentService {
     public async like( commentId: string, auth: Auth ): Promise<Comment>{
         if( ! commentId ) throw new BadRequestException( "Comment id is empty." )
 
-        const comment = await this.repository.findOne( {
+        const comment = await this.commentRepository.findOne( {
             where: { id: commentId },
             relations: { post: true }
         } )
@@ -120,7 +120,7 @@ export default class CommentService {
     public async unlike( commentId: string ): Promise<Comment>{
         if( ! commentId ) throw new BadRequestException( "Comment id is empty." )
 
-        const comment = await this.repository.findOneBy( { id: commentId } )
+        const comment = await this.commentRepository.findOneBy( { id: commentId } )
 
         if( ! comment ) throw new BadRequestException( 'Comment doesn\'t exists.' )
 
@@ -136,13 +136,33 @@ export default class CommentService {
 
     private updateCommentLikesCount( commentId: string ){
         this.likeRepository.countBy( { comment: { id: commentId } } ).then( ( count ) => {
-            this.repository.update( { id: commentId }, { likesCount: count } )
+            this.commentRepository.update( { id: commentId }, { likesCount: count } )
         } )
     }
 
     private updatePostCommentsCount( postId: string ){
-        this.repository.countBy( { post: { id: postId } } ).then( ( count ) => {
-            this.postService.repository.update( { id: postId }, { commentsCount: count } )
+        this.commentRepository.countBy( { post: { id: postId } } ).then( ( count ) => {
+            this.postService.postRepository.update( { id: postId }, { commentsCount: count } )
         } )
+    }
+
+    async formatComment( comment: Comment, auth: Auth ): Promise<Comment>{
+        if( auth.isAuthenticated ){
+            const like = await CommentLike.findOneBy( { user: { id: auth.user.id }, comment: { id: comment.id } } )
+
+            comment.isViewerLiked = Boolean( like )
+        } else{
+            comment.isViewerLiked = false
+        }
+
+        return comment
+    }
+
+    async formatComments( comments: Comment[], auth: Auth ): Promise<Comment[]>{
+        for ( const comment of comments ) {
+            await this.formatComment( comment, auth )
+        }
+
+        return comments
     }
 }

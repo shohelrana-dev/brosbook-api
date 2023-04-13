@@ -4,18 +4,19 @@ import {
     BeforeInsert,
     Column,
     Entity,
-    JoinColumn, OneToMany,
-    OneToOne
+    JoinColumn,
+    OneToMany,
+    OneToOne,
+    JoinTable, ManyToMany
 } from "typeorm"
 import argon2 from 'argon2'
 import Profile from "./Profile"
 import { AbstractEntity } from "@entities/AbstractEntity"
 import Media from "@entities/Media"
-import { Auth } from "@interfaces/index.interfaces"
-import Relationship from "@entities/Relationship"
+import Post from "@entities/Post"
 
 @Entity( 'users' )
-class User extends AbstractEntity {
+export default class User extends AbstractEntity {
     @Column( { length: 20, nullable: false } )
     firstName: string
 
@@ -42,12 +43,20 @@ class User extends AbstractEntity {
     emailVerifiedAt: string
 
     @OneToOne( () => Profile, ( profile ) => profile.user )
-    profile: Profile
+    profile?: Profile
 
-    @OneToMany( () => Relationship, ( relationship ) => relationship.follower )
+    @OneToMany( () => Post, ( post ) => post.author )
+    posts?: Post[]
+
+    @ManyToMany( () => User, user => user.followings )
+    @JoinTable( {
+        name: 'follows',
+        joinColumn: { name: 'userId', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'followerId', referencedColumnName: 'id' },
+    } )
     followers: User[]
 
-    @OneToMany( () => Relationship, ( relationship ) => relationship.following )
+    @ManyToMany( () => User, user => user.followers )
     followings: User[]
 
     //virtual columns
@@ -89,21 +98,4 @@ class User extends AbstractEntity {
     createProfile(){
         Profile.create( { user: { id: this.id } } ).save()
     }
-
-    async setViewerProperties( auth: Auth ): Promise<User>{
-        if( auth.isAuthenticated ){
-            const relationship = await Relationship.findOneBy( {
-                follower: { id: auth.user.id },
-                following: { id: this.id }
-            } )
-
-            this.isViewerFollow = Boolean( relationship )
-        } else{
-            this.isViewerFollow = false
-        }
-
-        return this
-    }
 }
-
-export default User

@@ -11,14 +11,14 @@ import { IsNull } from "typeorm"
 import { io } from "@config/express"
 
 export default class NotificationService {
-    public readonly repository = appDataSource.getRepository( Notification )
+    public readonly notificationRepository = appDataSource.getRepository( Notification )
 
     async getMany( params: ListQueryParams, auth: Auth ): Promise<ListResponse<Notification>>{
         const page  = params.page || 1
         const limit = params.limit || 12
         const skip  = limit * ( page - 1 )
 
-        const [notifications, count] = await this.repository.findAndCount( {
+        const [notifications, count] = await this.notificationRepository.findAndCount( {
             relations: { initiator: true, post: true, comment: true },
             where: { recipient: { id: auth.user.id } },
             order: { createdAt: "DESC" },
@@ -30,7 +30,7 @@ export default class NotificationService {
     }
 
     async getUnreadCount( auth: Auth ): Promise<number>{
-        return await this.repository.countBy( {
+        return await this.notificationRepository.countBy( {
             recipient: { id: auth.user.id },
             readAt: IsNull()
         } )
@@ -39,18 +39,18 @@ export default class NotificationService {
     async update( notificationId: string ): Promise<Notification>{
         if( ! notificationId ) throw new BadRequestException( 'Notification id is empty.' )
 
-        const notification = await this.repository.findOneBy( { id: notificationId } )
+        const notification = await this.notificationRepository.findOneBy( { id: notificationId } )
 
         if( isEmpty( notification ) ) throw new BadRequestException( 'Notification does not exists.' )
 
         notification.readAt = new Date( Date.now() ).toISOString()
-        await this.repository.save( notification )
+        await this.notificationRepository.save( notification )
 
         return notification
     }
 
     async readAll( auth: Auth ){
-        await this.repository.update( {
+        await this.notificationRepository.update( {
             recipient: { id: auth.user.id },
             readAt: IsNull()
         }, {
@@ -75,9 +75,9 @@ export default class NotificationService {
         notification.recipient = recipient
         notification.post      = post
         notification.comment   = comment
-        await this.repository.save( notification )
+        await this.notificationRepository.save( notification )
 
-        const recipientUnreadNotificationCount = await this.repository.countBy( {
+        const recipientUnreadNotificationCount = await this.notificationRepository.countBy( {
             recipient: { id: recipient.id },
             readAt: IsNull()
         } )
