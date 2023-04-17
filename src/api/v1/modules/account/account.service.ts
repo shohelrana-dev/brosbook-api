@@ -8,32 +8,41 @@ import isEmpty from "is-empty"
 import UserService from "@modules/users/user.service"
 import { Auth } from "@interfaces/index.interfaces"
 import { selectAllColumns } from "@utils/selectAllColumns"
+import { inject, injectable } from "inversify"
+import { appDataSource } from "@config/datasource.conf"
 
+@injectable()
 export default class AccountService {
-    private readonly userService = new UserService()
+    private readonly userRepository    = appDataSource.getRepository( User )
+    private readonly profileRepository = appDataSource.getRepository( Profile )
+
+    constructor(
+        @inject( UserService )
+        private readonly userService: UserService
+    ){}
 
     public async updateProfile( userData: UpdateProfileDTO, auth: Auth ): Promise<User>{
         if( isEmpty( userData ) ) throw new BadRequestException( 'User data is empty' )
 
         const { firstName, lastName, bio, phone, location, birthdate, gender } = userData
 
-        const user = await this.userService.userRepository.findOneBy( { id: auth.user.id } )
+        const user = await this.userRepository.findOneBy( { id: auth.user.id } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
-        const profile = await Profile.findOneBy( { user: { id: user.id } } )
+        const profile = await this.profileRepository.findOneBy( { user: { id: user.id } } )
 
         profile.bio       = bio
         profile.phone     = phone
         profile.location  = location
         profile.birthdate = birthdate
         profile.gender    = gender
-        await this.userService.profileRepository.save( profile )
+        await this.profileRepository.save( profile )
 
         user.firstName = firstName
         user.lastName  = lastName
         user.profile   = profile
-        await this.userService.userRepository.save( user )
+        await this.userRepository.save( user )
 
         return user
     }
@@ -43,9 +52,9 @@ export default class AccountService {
 
         const { username, password } = changeUsernameData
 
-        const user = await this.userService.userRepository.findOne( {
+        const user = await this.userRepository.findOne( {
             where: { id: auth.user.id },
-            select: selectAllColumns( this.userService.userRepository )
+            select: selectAllColumns( this.userRepository )
         } )
 
         if( ! user ) throw new BadRequestException( "User doesn't exists." )
@@ -55,7 +64,7 @@ export default class AccountService {
         if( ! isPasswordMatching ) throw new UnprocessableEntityException( "Invalid Password." )
 
         user.username = username
-        await this.userService.userRepository.save( user )
+        await this.userRepository.save( user )
 
         delete user.password
 
@@ -67,9 +76,9 @@ export default class AccountService {
 
         const { currentPassword, newPassword } = changePasswordData
 
-        const user = await this.userService.userRepository.findOne( {
+        const user = await this.userRepository.findOne( {
             where: { id: auth.user.id },
-            select: selectAllColumns( this.userService.userRepository )
+            select: selectAllColumns( this.userRepository )
         } )
 
         if( ! user ) throw new BadRequestException( "User doesn't exists." )
@@ -79,10 +88,6 @@ export default class AccountService {
         if( ! isPasswordMatching ) throw new UnprocessableEntityException( "Current password invalid." )
 
         user.password = await argon2.hash( newPassword )
-        await this.userService.userRepository.save( user )
-
-        delete user.password
-
-        return user
+        await this.userRepository.save( user )
     }
 }

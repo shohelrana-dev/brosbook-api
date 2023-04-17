@@ -4,24 +4,31 @@ import { Auth, ListResponse, ListQueryParams } from "@interfaces/index.interface
 import User from "@entities/User"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"
-import { appDataSource } from "@config/data-source"
+import { appDataSource } from "@config/datasource.conf"
 import PostService from "@modules/posts/post.service"
 import CommentLike from "@entities/CommentLike"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
 import ForbiddenException from "@exceptions/ForbiddenException"
+import { inject, injectable } from "inversify"
 
+@injectable()
 export default class CommentService {
-    public readonly commentRepository   = appDataSource.getRepository( Comment )
-    public readonly likeRepository      = appDataSource.getRepository( CommentLike )
-    public readonly postService         = new PostService()
-    public readonly notificationService = new NotificationService()
+    public readonly commentRepository = appDataSource.getRepository( Comment )
+    public readonly likeRepository    = appDataSource.getRepository( CommentLike )
+
+    constructor(
+        @inject( PostService )
+        public readonly postService: PostService,
+        @inject( NotificationService )
+        public readonly notificationService: NotificationService
+    ){}
 
     public async getComments( postId: string, params: ListQueryParams, auth: Auth ): Promise<ListResponse<Comment>>{
         if( ! postId ) throw new BadRequestException( "Post id is empty." )
 
-        const page  = params.page || 1
-        const limit = params.limit || 5
+        const page  = params.page
+        const limit = params.limit
         const skip  = limit * ( page - 1 )
 
         const [comments, count] = await this.commentRepository.findAndCount( {

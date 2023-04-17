@@ -9,17 +9,25 @@ import NotFoundException from "@exceptions/NotFoundException"
 import BadRequestException from "@exceptions/BadRequestException"
 import MediaService from "@services/media.service"
 import User from "@entities/User"
-import { appDataSource } from "@config/data-source"
+import { appDataSource } from "@config/datasource.conf"
 import NotificationService from "@modules/notifications/notification.service"
 import { NotificationTypes } from "@entities/Notification"
 import UserService from "@modules/users/user.service"
+import { inject, injectable } from "inversify"
 
+@injectable()
 export default class PostService {
-    public readonly postRepository      = appDataSource.getRepository( Post )
-    public readonly likeRepository      = appDataSource.getRepository( PostLike )
-    public readonly mediaService        = new MediaService()
-    public readonly notificationService = new NotificationService()
-    public readonly userService         = new UserService()
+    public readonly postRepository = appDataSource.getRepository( Post )
+    public readonly likeRepository = appDataSource.getRepository( PostLike )
+
+    constructor(
+        @inject( MediaService )
+        public readonly mediaService: MediaService,
+        @inject( NotificationService )
+        public readonly notificationService: NotificationService,
+        @inject( UserService )
+        public readonly userService: UserService
+    ){}
 
     public async create( postData: { body?: string, image: UploadedFile }, auth: Auth ): Promise<Post>{
         if( isEmpty( postData ) ) throw new BadRequestException( 'Post data is empty.' )
@@ -80,13 +88,12 @@ export default class PostService {
     }
 
     public async getPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
-        if( params.userId ){
+        const { userId, page, limit } = params
+        const skip                    = limit * ( page - 1 )
+
+        if( userId ){
             return await this.getUserPosts( params, auth )
         }
-
-        const page  = params.page || 1
-        const limit = params.limit || 6
-        const skip  = limit * ( page - 1 )
 
         const [posts, count] = await this.postRepository
             .createQueryBuilder( 'post' )
@@ -131,14 +138,11 @@ export default class PostService {
     }
 
 
-    public async getFeedPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
+    public async getFeedPosts( { page, limit }: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
         if( ! auth.isAuthenticated ){
-            return this.getPosts( params, auth )
+            return this.getPosts( { page, limit }, auth )
         }
-
-        const page  = params.page || 1
-        const limit = params.limit || 6
-        const skip  = limit * ( page - 1 )
+        const skip = limit * ( page - 1 )
 
         const [posts, count] = await this.postRepository
             .createQueryBuilder( 'post' )

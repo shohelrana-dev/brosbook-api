@@ -1,61 +1,54 @@
-import { NextFunction, Request, Response } from "express"
+import { Request, Response } from "express"
 import CommentService from "./comment.service"
+import { inject } from "inversify"
+import { controller, httpDelete, httpGet, httpPost } from "inversify-express-utils"
+import { ListResponse } from "@interfaces/index.interfaces"
+import Comment from "@entities/Comment"
+import authMiddleware from "@middleware/auth.middleware"
 
+/**
+ * @class CommentController
+ * @desc Responsible for handling API requests for the
+ * /posts/:postId/comments route.
+ **/
+@controller( '/posts/:postId/comments' )
 export default class CommentController {
-    constructor( private readonly commentService: CommentService ){
+    constructor(
+        @inject( CommentService )
+        private readonly commentService: CommentService
+    ){}
+
+    @httpGet( '/' )
+    public async getComments( req: Request ): Promise<ListResponse<Comment>>{
+        const page  = Number( req.params.page || 1 )
+        const limit = Number( req.params.limit || 5 )
+
+        return await this.commentService.getComments( req.params.postId, { page, limit }, req.auth )
     }
 
-    public getMany = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const comments = await this.commentService.getComments( req.params.postId, req.query, req.auth )
+    @httpPost( '/', authMiddleware )
+    public async create( req: Request, res: Response ): Promise<Response>{
+        const comment = await this.commentService.create( {
+            postId: req.params.postId,
+            body: req.body.body
+        }, req.auth )
 
-            res.json( comments )
-        } catch ( err ) {
-            next( err )
-        }
+        return res.status( 201 ).json( comment )
     }
 
-    public create = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const comment = await this.commentService.create( {
-                postId: req.params.postId,
-                body: req.body.body
-            }, req.auth )
-
-            res.status( 201 ).json( comment )
-        } catch ( err ) {
-            next( err )
-        }
+    @httpDelete( '/:id', authMiddleware )
+    public async delete( req: Request ): Promise<Comment>{
+        return await this.commentService.delete( req.params.id, req.auth )
     }
 
-    public delete = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const comment = await this.commentService.delete( req.params.commentId, req.auth )
-
-            res.json( comment )
-        } catch ( err ) {
-            next( err )
-        }
+    @httpPost( '/:id/like', authMiddleware )
+    public async like( req: Request ): Promise<Comment>{
+        return await this.commentService.like( req.params.id, req.auth )
     }
 
-    public like = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const comment = await this.commentService.like( req.params.commentId, req.auth )
-
-            res.json( comment )
-        } catch ( err ) {
-            next( err )
-        }
-    }
-
-    public unlike = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const comment = await this.commentService.unlike( req.params.commentId )
-
-            res.json( comment )
-        } catch ( err ) {
-            next( err )
-        }
+    @httpPost( '/:id/unlike', authMiddleware )
+    public async unlike( req: Request ): Promise<Comment>{
+        return await this.commentService.unlike( req.params.id )
     }
 
 }

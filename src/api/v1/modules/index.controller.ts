@@ -1,0 +1,7 @@
+import './auth/auth.controller'
+import './users/user.controller'
+import './posts/post.controller'
+import './comments/comment.controller'
+import './notifications/notification.controller'
+import './conversations/conversation.controller'
+import './account/account.controller'

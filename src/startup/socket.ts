@@ -2,6 +2,9 @@ import { Server } from "socket.io"
 import http from "http"
 import User from "@entities/User"
 import UserService from "@modules/users/user.service"
+import container from "../container"
+import MediaService from "@services/media.service"
+import NotificationService from "@modules/notifications/notification.service"
 
 
 export default function socketHandler( server: http.Server ){
@@ -15,7 +18,7 @@ export default function socketHandler( server: http.Server ){
     } )
 
     io.on( "connection", ( socket ) => {
-        const userService = new UserService()
+        const userService = new UserService( container.get( MediaService ), container.get( NotificationService ) )
         let connectedUser: User
 
         socket.on( 'connect_user', async( user: User ) => {

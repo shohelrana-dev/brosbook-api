@@ -1,10 +1,11 @@
 import Media from "@entities/Media"
 import isEmpty from "is-empty"
 import { MediaSource } from "@entities/Media"
-import { appDataSource } from "@config/data-source"
+import { appDataSource } from "@config/datasource.conf"
 import { v2 as cloudinary } from "cloudinary"
 import { Auth } from "@interfaces/index.interfaces"
 import User from "@entities/User"
+import { injectable } from "inversify"
 
 cloudinary.config( {
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -20,6 +21,7 @@ interface SaveMedia {
     source: MediaSource
 }
 
+@injectable()
 export default class MediaService {
     public readonly repository = appDataSource.getRepository( Media )
 

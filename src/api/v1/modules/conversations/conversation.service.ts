@@ -3,12 +3,12 @@ import Conversation from "@entities/Conversation"
 import conversation from "@entities/Conversation"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"
-import { appDataSource } from "@config/data-source"
+import { appDataSource } from "@config/datasource.conf"
 import UserService from "@modules/users/user.service"
 import Message, { MessageType } from "@entities/Message"
 import { UploadedFile } from "express-fileupload"
 import isEmpty from "is-empty"
-import { io } from "@config/express"
+import { io } from "@config/app.conf"
 import Reaction from "@entities/Reaction"
 import User from "@entities/User"
 import { paginateMeta } from "@utils/paginateMeta"
@@ -16,19 +16,27 @@ import MediaService from "@services/media.service"
 import Media, { MediaSource } from "@entities/Media"
 import { Brackets, IsNull } from "typeorm"
 import message from "@entities/Message"
+import { inject, injectable } from "inversify"
 
+@injectable()
 export default class ConversationService {
+    public readonly userRepository         = appDataSource.getRepository( User )
     public readonly conversationRepository = appDataSource.getRepository( Conversation )
     public readonly messageRepository      = appDataSource.getRepository( Message )
     public readonly reactionRepository     = appDataSource.getRepository( Reaction )
-    public readonly userService            = new UserService()
-    public readonly mediaService           = new MediaService()
+
+    constructor(
+        @inject( UserService )
+        private readonly userService: UserService,
+        @inject( MediaService )
+        private readonly mediaService: MediaService
+    ){}
 
     public async createConversation( participantId: string, auth: Auth ): Promise<Conversation>{
         if( ! participantId ) throw new BadRequestException( 'Participant id is empty.' )
 
-        const user        = await this.userService.userRepository.findOneBy( { id: auth.user.id } )
-        const participant = await this.userService.userRepository.findOneBy( { id: participantId } )
+        const user        = await this.userRepository.findOneBy( { id: auth.user.id } )
+        const participant = await this.userRepository.findOneBy( { id: participantId } )
 
         if( ! participant ) throw new NotFoundException( 'Participant user doesn\'t exists.' )
 
@@ -70,7 +78,7 @@ export default class ConversationService {
     public async getConversationByParticipantIdOrCreate( participantId: string, auth: Auth ): Promise<Conversation>{
         if( ! participantId ) throw new BadRequestException( 'Participant id is empty.' )
 
-        const participant = await this.userService.userRepository.findOneBy( { id: participantId } )
+        const participant = await this.userRepository.findOneBy( { id: participantId } )
         if( ! participant ) throw new NotFoundException( 'Participant  doesn\'t exists.' )
 
         const conversation = await this.conversationRepository.findOneBy( [
@@ -88,10 +96,8 @@ export default class ConversationService {
         return this.formatConversation( conversation, auth )
     }
 
-    public async getConversations( params: ListQueryParams, auth: Auth ): Promise<ListResponse<Conversation>>{
-        const page  = params.page || 1
-        const limit = params.limit || 12
-        const skip  = limit * ( page - 1 )
+    public async getConversations( { page, limit }: ListQueryParams, auth: Auth ): Promise<ListResponse<Conversation>>{
+        const skip = limit * ( page - 1 )
 
         const [conversations, count] = await this.conversationRepository.findAndCount( {
             relations: { user1: true, user2: true, lastMessage: true },
@@ -128,8 +134,8 @@ export default class ConversationService {
     public async getMessages( conversationId: string, params: ListQueryParams, auth: Auth ): Promise<ListResponse<Message>>{
         if( ! conversationId ) throw new BadRequestException( 'ConversationId id is empty.' )
 
-        const page  = params.page || 1
-        const limit = params.limit || 12
+        const page  = params.page
+        const limit = params.limit
         const skip  = limit * ( page - 1 )
 
         const conversation = await this.conversationRepository.findOneBy( { id: conversationId } )
@@ -161,7 +167,7 @@ export default class ConversationService {
         } )
         if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
 
-        const sender    = await this.userService.userRepository.findOneBy( { id: auth.user.id } )
+        const sender    = await this.userRepository.findOneBy( { id: auth.user.id } )
         const recipient = sender.id === conversation.user1.id ? conversation.user2 : conversation.user1
 
         const message        = new Message()
@@ -271,8 +277,8 @@ export default class ConversationService {
     public async getConversationMedia( conversationId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
         if( ! conversationId ) throw new BadRequestException( 'Conversation id is empty.' )
 
-        const page  = params.page || 1
-        const limit = params.limit || 12
+        const page  = params.page
+        const limit = params.limit
         const skip  = limit * ( page - 1 )
 
         const conversation = await this.conversationRepository.findOne( {

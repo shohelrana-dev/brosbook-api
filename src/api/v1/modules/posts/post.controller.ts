@@ -1,82 +1,69 @@
-import { NextFunction, Request, Response } from "express"
+import { Request, Response } from "express"
 import PostService from "./post.service"
-import {UploadedFile} from "express-fileupload"
+import { UploadedFile } from "express-fileupload"
+import { inject } from "inversify"
+import { controller, httpDelete, httpGet, httpPost } from "inversify-express-utils"
+import authMiddleware from "@middleware/auth.middleware"
+import { ListResponse } from "@interfaces/index.interfaces"
+import Post from "@entities/Post"
 
+/**
+ * @class PostController
+ * @desc Responsible for handling API requests for the
+ * /posts route.
+ **/
+@controller( '/posts' )
 export default class PostController {
-    constructor( private readonly postService: PostService ){
-    }
+    constructor(
+        @inject( PostService ) private readonly postService: PostService
+    ){}
 
-    public create = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        const body = req.body.body
+    @httpPost( '/', authMiddleware )
+    public async create( req: Request, res: Response ): Promise<Response>{
+        const body  = req.body.body
         const image = req.files?.image as UploadedFile
-        const auth = req.auth
-        try {
-            const post = await this.postService.create( {body, image}, auth )
+        const auth  = req.auth
 
-            res.status( 201 ).json( post )
-        } catch ( err ) {
-            next(err)
-        }
+        const post = await this.postService.create( { body, image }, auth )
+
+        return res.status( 201 ).json( post )
     }
 
-    public getPostById = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const post = await this.postService.getPostById( req.params.postId, req.auth )
+    @httpGet( '/' )
+    public async getPosts( req: Request ): Promise<ListResponse<Post>>{
+        const page   = Number( req.params.page || 1 )
+        const limit  = Number( req.params.limit || 6 )
+        const userId = req.params.userId
 
-            res.json( post )
-        } catch ( err ) {
-            next(err)
-        }
+        return await this.postService.getPosts( { userId, page, limit }, req.auth )
     }
 
-    public delete = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const post = await this.postService.delete( req.params.postId )
+    @httpGet( '/feed' )
+    public async getFeedPosts( req: Request ): Promise<ListResponse<Post>>{
+        const page  = Number( req.params.page || 1 )
+        const limit = Number( req.params.limit || 6 )
 
-            res.json( post )
-        } catch ( err ) {
-            next(err)
-        }
+        return await this.postService.getFeedPosts( { page, limit }, req.auth )
     }
 
-    public getPosts = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const posts = await this.postService.getPosts( req.query, req.auth )
-
-            res.json( posts )
-        } catch ( err ) {
-            next(err)
-        }
+    @httpGet( '/:id' )
+    public async getPostById( req: Request ): Promise<Post>{
+        return await this.postService.getPostById( req.params.id, req.auth )
     }
 
-    public getFeedPosts = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const posts = await this.postService.getFeedPosts( req.query, req.auth )
-
-            res.json( posts )
-        } catch ( err ) {
-            next(err)
-        }
+    @httpDelete( '/:id', authMiddleware )
+    public async delete( req: Request ): Promise<Post>{
+        return await this.postService.delete( req.params.id )
     }
 
-    public like = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const post = await this.postService.like( req.params.postId, req.auth )
-
-            res.json( post )
-        } catch ( err ) {
-            next(err)
-        }
+    @httpPost( '/:id/like', authMiddleware )
+    public async like( req: Request ): Promise<Post>{
+        return await this.postService.like( req.params.id, req.auth )
     }
 
-    public unlike = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const post = await this.postService.unlike( req.params.postId, req.auth )
-
-            res.json( post )
-        } catch ( err ) {
-            next(err)
-        }
+    @httpPost( '/:id/unlike', authMiddleware )
+    public async unlike( req: Request ): Promise<Post>{
+        return await this.postService.unlike( req.params.id, req.auth )
     }
 
 }

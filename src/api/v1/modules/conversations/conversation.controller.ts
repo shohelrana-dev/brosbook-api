@@ -1,121 +1,104 @@
 import ConversationService from "./conversation.service"
-import { NextFunction, Request, Response } from "express"
-import { UploadedFile } from "express-fileupload";
+import { Request, Response } from "express"
+import { UploadedFile } from "express-fileupload"
+import { controller, httpGet, httpPost } from "inversify-express-utils"
+import { inject } from "inversify"
+import authMiddleware from "@middleware/auth.middleware"
+import Conversation from "@entities/Conversation"
+import { ListResponse } from "@interfaces/index.interfaces"
+import Message from "@entities/Message"
+import Media from "@entities/Media"
+import message from "@entities/Message"
 
+/**
+ * @class ConversationController
+ * @desc Responsible for handling API requests for the
+ * /conversations route.
+ **/
+@controller( '/conversations', authMiddleware )
 export default class ConversationController {
-    constructor( private readonly conversationService: ConversationService ){}
+    constructor(
+        @inject( ConversationService )
+        private readonly conversationService: ConversationService
+    ){}
 
-    public createConversation = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const conversation = await this.conversationService.createConversation( req.body.participantId, req.auth )
+    @httpPost( '/' )
+    public async createConversation( req: Request, res: Response ): Promise<Response<Conversation>>{
+        const conversation = await this.conversationService.createConversation( req.body.participantId, req.auth )
 
-            res.json( conversation )
-        } catch ( err ) {
-            next( err )
-        }
+        return res.status( 201 ).json( conversation )
     }
 
-    public getConversations = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const conversations = await this.conversationService.getConversations( req.query, req.auth )
+    @httpGet( '/' )
+    public async getConversations( req: Request ): Promise<ListResponse<Conversation>>{
+        const page  = Number( req.params.page || 1 )
+        const limit = Number( req.params.limit || 12 )
 
-            res.json( conversations )
-        } catch ( err ) {
-            next( err )
-        }
+        return await this.conversationService.getConversations( { page, limit }, req.auth )
     }
 
-    public getUnreadConversationsCount = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const count = await this.conversationService.getUnreadConversationsCount( req.auth.user.id )
+    @httpGet( '/unread_count' )
+    public async getUnreadConversationsCount( req: Request ): Promise<{ count: number }>{
+        const count = await this.conversationService.getUnreadConversationsCount( req.auth.user.id )
 
-            res.json( { count } )
-        } catch ( err ) {
-            next( err )
-        }
+        return { count }
     }
 
-    public getConversationById = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const conversation = await this.conversationService.getConversationById( req.params.conversationId, req.auth )
-
-            res.json( conversation )
-        } catch ( err ) {
-            next( err )
-        }
+    @httpGet( '/:id' )
+    public async getConversationById( req: Request ): Promise<Conversation>{
+        return await this.conversationService.getConversationById( req.params.id, req.auth )
     }
 
-    public getConversationByParticipantIdOrCreate = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const conversation = await this.conversationService.getConversationByParticipantIdOrCreate( req.params.participantId, req.auth )
-
-            res.json( conversation )
-        } catch ( err ) {
-            next( err )
-        }
+    @httpGet( '/by/participant_id/:id' )
+    public async getConversationByParticipantIdOrCreate( req: Request ): Promise<Conversation>{
+        return await this.conversationService.getConversationByParticipantIdOrCreate( req.params.id, req.auth )
     }
 
-    public getMessages = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const messages = await this.conversationService.getMessages( req.params.conversationId, req.query, req.auth )
+    @httpGet( '/:conversationId/messages' )
+    public async getMessages( req: Request ): Promise<ListResponse<Message>>{
+        const page  = Number( req.params.page || 1 )
+        const limit = Number( req.params.limit || 15 )
 
-            res.json( messages )
-        } catch ( err ) {
-            next( err )
-        }
+        return await this.conversationService.getMessages( req.params.conversationId, { page, limit }, req.auth )
     }
 
-    public sendMessage = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const conversationId = req.params.conversationId
-            const body           = req.body.body
-            const image          = req.files?.image as UploadedFile
-            const type           = req.body.type
-            console.log( req.files )
+    @httpPost( '/:conversationId/messages' )
+    public async sendMessage( req: Request, res: Response ): Promise<Response<Message>>{
+        const conversationId = req.params.conversationId
+        const body           = req.body.body
+        const image          = req.files?.image as UploadedFile
+        const type           = req.body.type
 
-            const message = await this.conversationService.sendMessage( conversationId, {
-                body,
-                image,
-                type
-            }, req.auth )
+        const message = await this.conversationService.sendMessage( conversationId, {
+            body,
+            image,
+            type
+        }, req.auth )
 
-            res.json( message )
-        } catch ( err ) {
-            next( err )
-        }
+        return res.status( 201 ).json( message )
     }
 
-    public sendReaction = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const messageId = req.params.messageId
-            const name      = req.body.name
-            const message   = await this.conversationService.sendReaction( { messageId, name }, req.auth )
+    @httpPost( '/:conversationId/messages/seen_all' )
+    public async seenAllMessages( req: Request ): Promise<{ message: string }>{
+        await this.conversationService.seenAllMessages( req.params.conversationId, req.auth )
 
-            res.json( message )
-        } catch ( err ) {
-            next( err )
-        }
+        return { message: 'success' }
     }
 
-    public seenAllMessages = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            await this.conversationService.seenAllMessages( req.params.conversationId, req.auth )
+    @httpGet( '/:conversationId/media' )
+    public async getConversationMedia( req: Request ): Promise<ListResponse<Media>>{
+        const conversationId = req.params.conversationId
+        const page           = Number( req.params.page || 1 )
+        const limit          = Number( req.params.limit || 16 )
 
-            res.json( {message: 'success'} )
-        } catch ( err ) {
-            next( err )
-        }
+        return await this.conversationService.getConversationMedia( conversationId, { page, limit } )
     }
 
-    public getConversationMedia = async( req: Request, res: Response, next: NextFunction ) => {
-        try {
-            const conversationId = req.params.conversationId
+    @httpPost( '/:conversationId/messages/:messageId/reactions' )
+    public async sendReaction( req: Request, res: Response ): Promise<message>{
+        const messageId = req.params.messageId
+        const name      = req.body.name
 
-            const mediaList = await this.conversationService.getConversationMedia( conversationId, req.query )
-
-            res.json( mediaList )
-        } catch ( err ) {
-            next( err )
-        }
+        return await this.conversationService.sendReaction( { messageId, name }, req.auth )
     }
 }

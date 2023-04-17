@@ -1,83 +1,68 @@
-import { NextFunction, Request, Response } from "express"
-import AuthService                         from "./auth.service"
+import AuthService from "./auth.service"
+import { inject } from "inversify"
+import { controller, httpPost } from "inversify-express-utils"
+import dtoValidationMiddleware from "@middleware/dto-validation.middleware"
+import { CreateUserDTO, ForgotPasswordDTO, LoginUserDTO, ResetPasswordDTO } from "@modules/auth/auth.dto"
+import { Request, Response } from "express"
+import User from "@entities/User"
+import { LoginTokenPayload } from "@interfaces/index.interfaces"
 
-class AuthController {
+/**
+ * @class AuthController
+ * @desc Responsible for handling API requests for the
+ * /auth route.
+ **/
+@controller( '/auth' )
+export default class AuthController {
+    constructor(
+        @inject( AuthService )
+        private readonly authService: AuthService
+    ){}
 
-    constructor( private readonly authService: AuthService ){}
+    @httpPost( '/signup', dtoValidationMiddleware( CreateUserDTO ) )
+    public async signup( req: Request, res: Response ): Promise<Response<User>>{
+        const user = await this.authService.signup( req.body )
 
-    public signup = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            //create the user
-            const user = await this.authService.signup( req.body )
+        return res.status( 201 ).json( user )
+    }
 
-            //send success response
-            res.status( 201 ).json( user )
-        } catch ( err ) {
-            next( err )
+    @httpPost( '/login', dtoValidationMiddleware( LoginUserDTO ) )
+    public async login( req: Request ): Promise<LoginTokenPayload>{
+        return await this.authService.login( req.body )
+    }
+
+    @httpPost( '/google' )
+    public async loginWithGoogle( req: Request ): Promise<LoginTokenPayload>{
+        return await this.authService.loginWithGoogle( req.body.token )
+    }
+
+    @httpPost( '/forgot_password', dtoValidationMiddleware( ForgotPasswordDTO ) )
+    public async forgotPassword( req: Request ): Promise<{ message: string }>{
+        const email = req.body.email
+
+        await this.authService.forgotPassword( email )
+
+        return {
+            message: `We've sent an email to ${ email } with a link to get back into your account.`
         }
     }
 
-    public login = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            //attempt login
-            const loginData = await this.authService.login( req.body )
+    @httpPost( '/reset_password/:token', dtoValidationMiddleware( ResetPasswordDTO ) )
+    public async resetPassword( req: Request ): Promise<{ message: string }>{
+        await this.authService.resetPassword( { ...req.body, token: req.params.token } )
 
-
-            res.json( loginData )
-        } catch ( err ) {
-            next( err )
-        }
+        return { message: 'Password has been changed' }
     }
 
-    public loginWithGoogle = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const loginData = await this.authService.loginWithGoogle( req.body.token )
-
-            res.json( loginData )
-        } catch ( err ) {
-            next( err )
-        }
+    @httpPost( '/email_verification/:token' )
+    public async verifyEmail( req: Request ): Promise<User>{
+        return await this.authService.verifyEmail( req.params.token )
     }
 
-    public forgotPassword = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            await this.authService.forgotPassword( req.body.email )
+    @httpPost( '/email_verification/resend' )
+    public async resendEmailVerificationLink( req: Request ): Promise<{ message: string }>{
+        await this.authService.resendEmailVerificationLink( req.body.email )
 
-            res.json( { message: `We've sent an email to ${ req.body.email } with a link to get back into your account.` } )
-        } catch ( err ) {
-            next( err )
-        }
-    }
-
-    public resetPassword = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            await this.authService.resetPassword( { ...req.body, token: req.params.token } )
-
-            res.json( { message: 'Password has been changed' } )
-        } catch ( err ) {
-            next( err )
-        }
-    }
-
-    public verifyEmail = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            const user = await this.authService.verifyEmail( req.params.token )
-
-            res.json( user )
-        } catch ( err ) {
-            next( err )
-        }
-    }
-
-    public resendEmailVerificationLink = async( req: Request, res: Response, next: NextFunction ): Promise<void> => {
-        try {
-            await this.authService.resendEmailVerificationLink( req.body.email )
-
-            res.json( { message: 'Success resending email' } )
-        } catch ( err ) {
-            next( err )
-        }
+        return { message: 'Email has been resent' }
     }
 }
-
-export default AuthController

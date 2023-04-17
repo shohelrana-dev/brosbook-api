@@ -10,10 +10,19 @@ import { CreateUserDTO } from "@modules/auth/auth.dto"
 import { EmailService } from "@services/email.service"
 import UserService from "@modules/users/user.service"
 import { selectAllColumns } from "@utils/selectAllColumns"
+import { inject, injectable } from "inversify"
+import { appDataSource } from "@config/datasource.conf"
 
+@injectable()
 class AuthService {
-    private readonly userService  = new UserService()
-    private readonly emailService = new EmailService()
+    private readonly userRepository = appDataSource.getRepository( User )
+
+    constructor(
+        @inject( UserService )
+        private readonly userService: UserService,
+        @inject( EmailService )
+        private readonly emailService: EmailService
+    ){}
 
     public async signup( userData: CreateUserDTO ): Promise<User>{
         if( isEmpty( userData ) ) throw new BadRequestException( 'Signup user data is empty.' )
@@ -30,12 +39,12 @@ class AuthService {
 
         const { username, password } = userData
 
-        const user = await this.userService.userRepository.findOne( {
+        const user = await this.userRepository.findOne( {
             where: [
                 { email: username },
                 { username }
             ],
-            select: selectAllColumns( this.userService.userRepository )
+            select: selectAllColumns( this.userRepository )
         } )
 
         if( ! user ) throw new BadRequestException( 'User not found with the email or username.' )
@@ -78,12 +87,12 @@ class AuthService {
             throw new BadRequestException( 'Invalid token.' )
         }
 
-        let user = await this.userService.userRepository.findOneBy( { email: email } )
+        let user = await this.userRepository.findOneBy( { email: email } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
         user.password = await argon2.hash( password )
-        user          = await this.userService.userRepository.save( user )
+        user          = await this.userRepository.save( user )
         delete user.password
 
         return user
@@ -99,7 +108,7 @@ class AuthService {
             throw new BadRequestException( 'Invalid token.' )
         }
 
-        let user = await this.userService.userRepository.findOneBy( { email } )
+        let user = await this.userRepository.findOneBy( { email } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
@@ -108,14 +117,14 @@ class AuthService {
         }
 
         user.emailVerifiedAt = new Date( Date.now() ).toISOString()
-        user                 = await this.userService.userRepository.save( user )
+        user                 = await this.userRepository.save( user )
         delete user.password
 
         return user
     }
 
     public async resendEmailVerificationLink( email: string ){
-        const user = await this.userService.userRepository.findOneBy( { email } )
+        const user = await this.userRepository.findOneBy( { email } )
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 

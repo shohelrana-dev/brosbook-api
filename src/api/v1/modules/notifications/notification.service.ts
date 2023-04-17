@@ -1,4 +1,4 @@
-import { appDataSource } from "@config/data-source"
+import { appDataSource } from "@config/datasource.conf"
 import { Notification, NotificationTypes } from "@entities/Notification"
 import { Auth, ListQueryParams, ListResponse } from "@interfaces/index.interfaces"
 import { paginateMeta } from "@utils/paginateMeta"
@@ -8,15 +8,15 @@ import User from "@entities/User"
 import Post from "@entities/Post"
 import Comment from "@entities/Comment"
 import { IsNull } from "typeorm"
-import { io } from "@config/express"
+import { io } from "@config/app.conf"
+import { injectable } from "inversify"
 
+@injectable()
 export default class NotificationService {
     public readonly notificationRepository = appDataSource.getRepository( Notification )
 
-    async getMany( params: ListQueryParams, auth: Auth ): Promise<ListResponse<Notification>>{
-        const page  = params.page || 1
-        const limit = params.limit || 12
-        const skip  = limit * ( page - 1 )
+    async getNotifications( { page, limit }: ListQueryParams, auth: Auth ): Promise<ListResponse<Notification>>{
+        const skip = limit * ( page - 1 )
 
         const [notifications, count] = await this.notificationRepository.findAndCount( {
             relations: { initiator: true, post: true, comment: true },
@@ -29,14 +29,14 @@ export default class NotificationService {
         return { items: notifications, ...paginateMeta( count, page, limit ) }
     }
 
-    async getUnreadCount( auth: Auth ): Promise<number>{
+    async getUnreadNotificationsCount( auth: Auth ): Promise<number>{
         return await this.notificationRepository.countBy( {
             recipient: { id: auth.user.id },
             readAt: IsNull()
         } )
     }
 
-    async update( notificationId: string ): Promise<Notification>{
+    async updateNotification( notificationId: string ): Promise<Notification>{
         if( ! notificationId ) throw new BadRequestException( 'Notification id is empty.' )
 
         const notification = await this.notificationRepository.findOneBy( { id: notificationId } )
@@ -49,7 +49,7 @@ export default class NotificationService {
         return notification
     }
 
-    async readAll( auth: Auth ){
+    async readAllNotifications( auth: Auth ){
         await this.notificationRepository.update( {
             recipient: { id: auth.user.id },
             readAt: IsNull()

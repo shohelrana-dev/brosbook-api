@@ -1,6 +1,8 @@
 import sendEmail from "@utils/sendEmail"
-import jwt       from "jsonwebtoken"
+import jwt from "jsonwebtoken"
+import { injectable } from "inversify"
 
+@injectable()
 export class EmailService {
     public async sendEmailVerificationLink( email: string, username: string ){
         const token   = jwt.sign( { email }, process.env.JWT_SECRET )

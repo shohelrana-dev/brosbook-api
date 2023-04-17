@@ -1,14 +1,12 @@
 import { UploadedFile } from "express-fileupload"
 import User from "@entities/User"
 import { paginateMeta } from "@utils/paginateMeta"
-import { appDataSource } from "@config/data-source"
 import { Auth, ListQueryParams, ListResponse, SearchQueryParams } from "@interfaces/index.interfaces"
 import BadRequestException from "@exceptions/BadRequestException"
 import Media, { MediaSource } from "@entities/Media"
 import MediaService from "@services/media.service"
 import NotFoundException from "@exceptions/NotFoundException"
 import isEmpty from "is-empty"
-import Profile from "@entities/Profile"
 import { CreateUserDTO } from "@modules/auth/auth.dto"
 import { LoginTicket, OAuth2Client, TokenPayload } from "google-auth-library"
 import UnauthorizedException from "@exceptions/UnauthorizedException"
@@ -18,13 +16,21 @@ import { NotificationTypes } from "@entities/Notification"
 import { Brackets, In } from "typeorm"
 import fetch from "cross-fetch"
 import InternalServerException from "@exceptions/InternalServerException"
+import { inject, injectable } from "inversify"
+import { appDataSource } from "@config/datasource.conf"
+import Profile from "@entities/Profile"
 
-
+@injectable()
 export default class UserService {
-    public readonly userRepository      = appDataSource.getRepository( User )
-    public readonly profileRepository   = appDataSource.getRepository( Profile )
-    public readonly mediaService        = new MediaService()
-    public readonly notificationService = new NotificationService()
+    private readonly userRepository    = appDataSource.getRepository( User )
+    private readonly profileRepository = appDataSource.getRepository( Profile )
+
+    constructor(
+        @inject( MediaService )
+        private readonly mediaService: MediaService,
+        @inject( NotificationService )
+        private readonly notificationService: NotificationService
+    ){}
 
     public async create( userData: CreateUserDTO ): Promise<User>{
         if( isEmpty( userData ) ) throw new BadRequestException( 'User data is empty.' )
@@ -151,9 +157,8 @@ export default class UserService {
     }
 
     public async getUserMediaList( userId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
-        const page  = params.page || 1
-        const limit = params.limit || 12
-        const skip  = limit * ( page - 1 )
+        const { page, limit } = params
+        const skip            = limit * ( page - 1 )
 
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
@@ -174,10 +179,8 @@ export default class UserService {
     }
 
     public async searchUsers( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>>{
-        const q     = params.q
-        const page  = params.page || 1
-        const limit = params.limit || 16
-        const skip  = limit * ( page - 1 )
+        const { q, page, limit } = params
+        const skip               = limit * ( page - 1 )
 
         const [users, count] = await this.userRepository
             .createQueryBuilder( 'user' )
@@ -199,9 +202,8 @@ export default class UserService {
     }
 
     public async getSuggestions( params: ListQueryParams, auth: Auth ): Promise<ListResponse<User>>{
-        const page  = params.page || 1
-        const limit = params.limit || 6
-        const skip  = limit * ( page - 1 )
+        const { page, limit } = params
+        const skip            = limit * ( page - 1 )
 
         const user = await this.userRepository.findOne( {
             where: { id: auth.user.id },
@@ -231,9 +233,8 @@ export default class UserService {
     public async getFollowers( userId: string, params: ListQueryParams, auth: Auth ): Promise<ListResponse<User>>{
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
-        const page  = params.page || 1
-        const limit = params.limit || 10
-        const skip  = limit * ( page - 1 )
+        const { page, limit } = params
+        const skip            = limit * ( page - 1 )
 
         const [followers, count] = await this.userRepository
             .createQueryBuilder( 'user' )
@@ -252,9 +253,8 @@ export default class UserService {
     public async getFollowings( userId: string, params: ListQueryParams, auth: Auth ): Promise<ListResponse<User>>{
         if( ! userId ) throw new BadRequestException( "User id is empty." )
 
-        const page  = params.page || 1
-        const limit = params.limit || 10
-        const skip  = limit * ( page - 1 )
+        const { page, limit } = params
+        const skip            = limit * ( page - 1 )
 
         const [followings, count] = await this.userRepository
             .createQueryBuilder( 'user' )
