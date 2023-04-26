@@ -31,8 +31,8 @@ export default class ConversationController {
 
     @httpGet( '/' )
     public async getConversations( req: Request ): Promise<ListResponse<Conversation>>{
-        const page  = Number( req.params.page || 1 )
-        const limit = Number( req.params.limit || 12 )
+        const page  = Number( req.query.page || 1 )
+        const limit = Number( req.query.limit || 12 )
 
         return await this.conversationService.getConversations( { page, limit }, req.auth )
     }
@@ -56,8 +56,8 @@ export default class ConversationController {
 
     @httpGet( '/:conversationId/messages' )
     public async getMessages( req: Request ): Promise<ListResponse<Message>>{
-        const page  = Number( req.params.page || 1 )
-        const limit = Number( req.params.limit || 15 )
+        const page  = Number( req.query.page || 1 )
+        const limit = Number( req.query.limit || 15 )
 
         return await this.conversationService.getMessages( req.params.conversationId, { page, limit }, req.auth )
     }
@@ -88,8 +88,8 @@ export default class ConversationController {
     @httpGet( '/:conversationId/media' )
     public async getConversationMedia( req: Request ): Promise<ListResponse<Media>>{
         const conversationId = req.params.conversationId
-        const page           = Number( req.params.page || 1 )
-        const limit          = Number( req.params.limit || 16 )
+        const page           = Number( req.query.page || 1 )
+        const limit          = Number( req.query.limit || 16 )
 
         return await this.conversationService.getConversationMedia( conversationId, { page, limit } )
     }

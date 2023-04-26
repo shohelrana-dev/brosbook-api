@@ -31,8 +31,8 @@ export default class PostController {
 
     @httpGet( '/' )
     public async getPosts( req: Request ): Promise<ListResponse<Post>>{
-        const page   = Number( req.params.page || 1 )
-        const limit  = Number( req.params.limit || 6 )
+        const page   = Number( req.query.page || 1 )
+        const limit  = Number( req.query.limit || 6 )
         const userId = req.params.userId
 
         return await this.postService.getPosts( { userId, page, limit }, req.auth )
@@ -40,8 +40,8 @@ export default class PostController {
 
     @httpGet( '/feed' )
     public async getFeedPosts( req: Request ): Promise<ListResponse<Post>>{
-        const page  = Number( req.params.page || 1 )
-        const limit = Number( req.params.limit || 6 )
+        const page  = Number( req.query.page || 1 )
+        const limit = Number( req.query.limit || 6 )
 
         return await this.postService.getFeedPosts( { page, limit }, req.auth )
     }

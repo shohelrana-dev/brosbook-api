@@ -16,8 +16,8 @@ export default class NotificationController {
 
     @httpGet( '/' )
     public async getNotifications( req: Request ): Promise<ListResponse<Notification>>{
-        const page  = Number( req.params.page || 1 )
-        const limit = Number( req.params.limit || 12 )
+        const page  = Number( req.query.page || 1 )
+        const limit = Number( req.query.limit || 12 )
 
         return await this.notificationService.getNotifications( { page, limit }, req.auth )
     }

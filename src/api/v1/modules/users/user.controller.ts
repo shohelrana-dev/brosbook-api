@@ -30,16 +30,16 @@ export default class UserController {
     @httpGet( '/search' )
     public async searchUsers( req: Request ): Promise<ListResponse<User>>{
         const q= req.query.q as string
-        const page  = Number( req.params.page || 1 )
-        const limit = Number( req.params.limit || 6 )
+        const page  = Number( req.query.page || 1 )
+        const limit = Number( req.query.limit || 6 )
 
         return await this.usersService.searchUsers( { q, page, limit }, req.auth )
     }
 
     @httpGet( '/suggestions', authMiddleware )
     public async getSuggestions( req: Request ): Promise<ListResponse<User>>{
-        const page  = Number( req.params.page || 1 )
-        const limit = Number( req.params.limit || 6 )
+        const page  = Number( req.query.page || 1 )
+        const limit = Number( req.query.limit || 6 )
 
         return await this.usersService.getSuggestions( { page, limit }, req.auth )
     }

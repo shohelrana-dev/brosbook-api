@@ -20,8 +20,8 @@ export default class CommentController {
 
     @httpGet( '/' )
     public async getComments( req: Request ): Promise<ListResponse<Comment>>{
-        const page  = Number( req.params.page || 1 )
-        const limit = Number( req.params.limit || 5 )
+        const page  = Number( req.query.page || 1 )
+        const limit = Number( req.query.limit || 5 )
 
         return await this.commentService.getComments( req.params.postId, { page, limit }, req.auth )
     }
