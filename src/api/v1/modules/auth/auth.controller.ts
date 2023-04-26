@@ -1,6 +1,6 @@
 import AuthService from "./auth.service"
 import { inject } from "inversify"
-import { controller, httpPost } from "inversify-express-utils"
+import {controller, httpGet, httpPost} from "inversify-express-utils"
 import dtoValidationMiddleware from "@middleware/dto-validation.middleware"
 import { CreateUserDTO, ForgotPasswordDTO, LoginUserDTO, ResetPasswordDTO } from "@modules/auth/auth.dto"
 import { Request, Response } from "express"
@@ -54,15 +54,15 @@ export default class AuthController {
         return { message: 'Password has been changed' }
     }
 
-    @httpPost( '/email_verification/:token' )
-    public async verifyEmail( req: Request ): Promise<User>{
-        return await this.authService.verifyEmail( req.params.token )
-    }
-
     @httpPost( '/email_verification/resend' )
     public async resendEmailVerificationLink( req: Request ): Promise<{ message: string }>{
         await this.authService.resendEmailVerificationLink( req.body.email )
 
         return { message: 'Email has been resent' }
+    }
+
+    @httpGet( '/email_verification/:token' )
+    public async verifyEmail( req: Request ): Promise<User>{
+        return await this.authService.verifyEmail( req.params.token )
     }
 }

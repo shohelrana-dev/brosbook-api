@@ -29,7 +29,7 @@ export default class UserController {
 
     @httpGet( '/search' )
     public async searchUsers( req: Request ): Promise<ListResponse<User>>{
-        const q     = req.params.q
+        const q= req.query.q as string
         const page  = Number( req.params.page || 1 )
         const limit = Number( req.params.limit || 6 )
 

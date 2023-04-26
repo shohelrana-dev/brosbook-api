@@ -17,11 +17,11 @@ import errorMiddleware from '@middleware/error.middleware'
 import deserializeUserMiddleware from '@middleware/deserialize-user.middleware'
 import fileUpload from "express-fileupload"
 import { InversifyExpressServer } from "inversify-express-utils"
-import container from "../container"
+import container from "@core/container"
 import { createServer } from "http"
-import socketInit from "@startup/socket"
+import SocketService from "@services/socket.service"
 
-export const server = new InversifyExpressServer( container, null, { rootPath: '/api/v1' } )
+const server = new InversifyExpressServer( container, undefined, { rootPath: '/api/v1' } )
 
 server.setConfig( app => {
     //apply initial configurations
@@ -47,14 +47,12 @@ server.setConfig( app => {
     app.use( errorMiddleware )
 } )
 
-//build the app from the configured server instance
 const app = server.build()
 
 //create a http server instance
-const serverInstance = createServer( app )
+const httpServer = createServer( app )
 
-//initialize socket
-export const io = socketInit( serverInstance )
+//start socket service
+SocketService.start(httpServer)
 
-//export the http server instance
-export default serverInstance
+export default httpServer

@@ -1,6 +1,5 @@
 import { Auth, ListQueryParams, ListResponse } from "@interfaces/index.interfaces"
 import Conversation from "@entities/Conversation"
-import conversation from "@entities/Conversation"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"
 import { appDataSource } from "@config/datasource.conf"
@@ -8,15 +7,14 @@ import UserService from "@modules/users/user.service"
 import Message, { MessageType } from "@entities/Message"
 import { UploadedFile } from "express-fileupload"
 import isEmpty from "is-empty"
-import { io } from "@config/app.conf"
 import Reaction from "@entities/Reaction"
 import User from "@entities/User"
 import { paginateMeta } from "@utils/paginateMeta"
 import MediaService from "@services/media.service"
 import Media, { MediaSource } from "@entities/Media"
 import { Brackets, IsNull } from "typeorm"
-import message from "@entities/Message"
 import { inject, injectable } from "inversify"
+import SocketService from "@services/socket.service"
 
 @injectable()
 export default class ConversationService {
@@ -186,14 +184,14 @@ export default class ConversationService {
         }
         await this.messageRepository.save( message )
 
-        io.emit( `message.new.${ conversation.id }`, message )
+        SocketService.emit( `message.new.${ conversation.id }`, message )
 
         conversation.lastMessage = { id: message.id } as Message
         await this.conversationRepository.save( conversation )
 
         this.getUnreadConversationsCount( recipient.id ).then( ( count ) => {
             if( count > 0 ){
-                io.emit( `conversation.unread.count.${ recipient.id }`, count )
+                SocketService.emit( `conversation.unread.count.${ recipient.id }`, count )
             }
         } )
 
@@ -232,7 +230,7 @@ export default class ConversationService {
 
         message.reactions = await this.reactionRepository.findBy( { message: { id: messageId } } )
 
-        io.emit( `message.update.${ message.conversation.id }`, message )
+        SocketService.emit( `message.update.${ message.conversation.id }`, message )
 
         return message
     }
@@ -265,11 +263,11 @@ export default class ConversationService {
                 seenAt: new Date( Date.now() )
             } )
 
-            io.emit( `conversation.unread.count.${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
+            SocketService.emit( `conversation.unread.count.${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
 
 
             const message = await this.messageRepository.findOneBy( { id: conversation.lastMessage.id } )
-            io.emit( `message.seen.${ conversation.id }`, message )
+            SocketService.emit( `message.seen.${ conversation.id }`, message )
         }
 
     }

@@ -8,8 +8,8 @@ import User from "@entities/User"
 import Post from "@entities/Post"
 import Comment from "@entities/Comment"
 import { IsNull } from "typeorm"
-import { io } from "@config/app.conf"
-import { injectable } from "inversify"
+import {injectable} from "inversify"
+import SocketService from "@services/socket.service"
 
 @injectable()
 export default class NotificationService {
@@ -57,7 +57,7 @@ export default class NotificationService {
             readAt: new Date( Date.now() ).toISOString()
         } )
 
-        io.emit( `notification.unread.count.${ auth.user.id }`, 0 )
+        SocketService.emit( `notification.unread.count.${ auth.user.id }`, 0 )
     }
 
     async create( data: { recipient: User, post?: Post, comment?: Comment, type: NotificationTypes }, auth: Auth ): Promise<Notification>{
@@ -82,8 +82,8 @@ export default class NotificationService {
             readAt: IsNull()
         } )
 
-        io.emit( `notification.new.${ recipient.id }`, notification )
-        io.emit( `notification.unread.count.${ recipient.id }`, recipientUnreadNotificationCount )
+        SocketService.emit( `notification.new.${ recipient.id }`, notification )
+        SocketService.emit( `notification.unread.count.${ recipient.id }`, recipientUnreadNotificationCount )
 
         return notification
     }

@@ -1,5 +1,5 @@
 /* All Controller Import */
-import './api/v1/modules/index.controller'
+import '@modules/index.controller'
 
 import { Container } from 'inversify'
 import UserService from "@modules/users/user.service"
@@ -11,6 +11,7 @@ import AuthService from "@modules/auth/auth.service"
 import { EmailService } from "@services/email.service"
 import ConversationService from "@modules/conversations/conversation.service"
 import AccountService from "@modules/account/account.service"
+import SocketService from "@services/socket.service"
 
 //create an instance of the inversify container
 const container = new Container()
@@ -25,5 +26,6 @@ container.bind( PostService ).toSelf()
 container.bind( CommentService ).toSelf()
 container.bind( AccountService ).toSelf()
 container.bind( ConversationService ).toSelf()
+container.bind( SocketService ).to(SocketService)
 
 export default container
