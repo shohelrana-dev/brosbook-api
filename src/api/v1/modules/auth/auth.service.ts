@@ -19,9 +19,7 @@ class AuthService {
 
     constructor(
         @inject( UserService )
-        private readonly userService: UserService,
-        @inject( EmailService )
-        private readonly emailService: EmailService
+        private readonly userService: UserService
     ){}
 
     public async signup( userData: CreateUserDTO ): Promise<User>{
@@ -29,7 +27,7 @@ class AuthService {
 
         const user = await this.userService.create( userData )
 
-        await this.emailService.sendEmailVerificationLink( userData.email, user.username )
+        await EmailService.sendEmailVerificationLink( userData.email, user.username )
 
         return user
     }
@@ -73,7 +71,7 @@ class AuthService {
 
         if( ! user ) throw new BadRequestException( 'User not found with the email.' )
 
-        await this.emailService.sendResetPasswordLink( email )
+        await EmailService.sendResetPasswordLink( email )
     }
 
     public async resetPassword( payload: ResetPasswordDTO ): Promise<User>{
@@ -128,7 +126,7 @@ class AuthService {
 
         if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
 
-        await this.emailService.sendEmailVerificationLink( user.email, user.username )
+        await EmailService.sendEmailVerificationLink( user.email, user.username )
     }
 
     private static createJwtLoginToken( user: User ): LoginTokenPayload{

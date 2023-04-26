@@ -24,10 +24,9 @@ import Profile from "@entities/Profile"
 export default class UserService {
     private readonly userRepository    = appDataSource.getRepository( User )
     private readonly profileRepository = appDataSource.getRepository( Profile )
+    private readonly mediaRepository = appDataSource.getRepository( Media )
 
     constructor(
-        @inject( MediaService )
-        private readonly mediaService: MediaService,
         @inject( NotificationService )
         private readonly notificationService: NotificationService
     ){}
@@ -83,7 +82,7 @@ export default class UserService {
             await this.userRepository.save( user )
 
             //save photo
-            user.avatar = await this.mediaService.save( {
+            user.avatar = await MediaService.save( {
                 file: Buffer.from( await ( await fetch( tokenPayload.picture ) ).arrayBuffer() ),
                 source: MediaSource.AVATAR,
                 creator: { id: user.id } as User
@@ -166,7 +165,7 @@ export default class UserService {
 
         if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
 
-        const [media, count] = await this.mediaService.repository.findAndCount( {
+        const [media, count] = await this.mediaRepository.findAndCount( {
             where: {
                 creator: { id: user.id },
                 source: In( [MediaSource.AVATAR, MediaSource.COVER_PHOTO, MediaSource.POST] )
@@ -274,7 +273,7 @@ export default class UserService {
 
         const user = await this.userRepository.findOneBy( { id: auth.user.id } )
 
-        user.avatar = await this.mediaService.save( {
+        user.avatar = await MediaService.save( {
             file: avatar.data,
             creator: auth.user,
             source: MediaSource.AVATAR
@@ -291,7 +290,7 @@ export default class UserService {
 
         if( ! user || ! profile ) throw new BadRequestException( "User does not exists." )
 
-        profile.coverPhoto = await this.mediaService.save( {
+        profile.coverPhoto = await MediaService.save( {
             file: coverPhoto.data,
             creator: auth.user,
             source: MediaSource.COVER_PHOTO

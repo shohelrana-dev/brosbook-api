@@ -21,8 +21,6 @@ export default class PostService {
     public readonly likeRepository = appDataSource.getRepository( PostLike )
 
     constructor(
-        @inject( MediaService )
-        public readonly mediaService: MediaService,
         @inject( NotificationService )
         public readonly notificationService: NotificationService,
         @inject( UserService )
@@ -36,7 +34,7 @@ export default class PostService {
 
         if( image ){
             //save image
-            const savedImage = await this.mediaService.save( {
+            const savedImage = await MediaService.save( {
                 file: image.data,
                 creator: auth.user,
                 source: MediaSource.POST
@@ -81,7 +79,7 @@ export default class PostService {
         await this.postRepository.remove( post )
 
         if( post.image ){
-            this.mediaService.delete( post.image.id )
+            MediaService.delete( post.image.id )
         }
 
         return post

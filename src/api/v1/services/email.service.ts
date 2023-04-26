@@ -1,10 +1,8 @@
 import sendEmail from "@utils/sendEmail"
 import jwt from "jsonwebtoken"
-import { injectable } from "inversify"
 
-@injectable()
 export class EmailService {
-    public async sendEmailVerificationLink( email: string, username: string ){
+    public static async sendEmailVerificationLink( email: string, username: string ){
         const token   = jwt.sign( { email }, process.env.JWT_SECRET )
         const appName = process.env.APP_NAME || 'Brosbook'
 
@@ -32,7 +30,7 @@ export class EmailService {
         await sendEmail( email, subject, html )
     }
 
-    public async sendResetPasswordLink( email: string ){
+    public static async sendResetPasswordLink( email: string ){
         const token   = jwt.sign( { email }, process.env.JWT_SECRET )
         const appName = process.env.APP_NAME || 'Brosbook'
 

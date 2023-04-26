@@ -23,9 +23,9 @@ interface SaveMedia {
 
 @injectable()
 export default class MediaService {
-    public readonly repository = appDataSource.getRepository( Media )
+    private static readonly mediaRepository = appDataSource.getRepository( Media )
 
-    async save( { file, creator, source }: SaveMedia ): Promise<Media>{
+    public static async save( { file, creator, source }: SaveMedia ): Promise<Media>{
         if( isEmpty( file ) ) throw new Error( 'File is empty.' )
 
         return new Promise( ( resolve, reject ) => {
@@ -47,23 +47,23 @@ export default class MediaService {
                 media.size    = result.bytes
                 media.source  = source
                 media.creator = creator as User
-                await this.repository.save( media )
+                await this.mediaRepository.save( media )
 
                 resolve( media )
             } ).end( file )
         } )
     }
 
-    async delete( mediaId: string ): Promise<Media>{
+    public static async delete( mediaId: string ): Promise<Media>{
         if( ! mediaId ) throw new Error( 'Media id is empty.' )
 
-        const media = await this.repository.findOneBy( { id: mediaId } )
+        const media = await this.mediaRepository.findOneBy( { id: mediaId } )
 
         if( ! media ) throw new Error( 'Media doesn\'t exists.' )
 
         await cloudinary.uploader.destroy( media.name )
 
-        await this.repository.delete( { id: mediaId } )
+        await this.mediaRepository.delete( { id: mediaId } )
 
         return media
     }

@@ -25,9 +25,7 @@ export default class ConversationService {
 
     constructor(
         @inject( UserService )
-        private readonly userService: UserService,
-        @inject( MediaService )
-        private readonly mediaService: MediaService
+        private readonly userService: UserService
     ){}
 
     public async createConversation( participantId: string, auth: Auth ): Promise<Conversation>{
@@ -174,7 +172,7 @@ export default class ConversationService {
         message.type         = type
 
         if( image ){
-            message.image = await this.mediaService.save( {
+            message.image = await MediaService.save( {
                 file: image.data,
                 creator: sender,
                 source: MediaSource.CONVERSATION
