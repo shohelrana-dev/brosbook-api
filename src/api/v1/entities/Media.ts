@@ -33,7 +33,7 @@ export default class Media extends AbstractEntity {
     @Column( { type: 'enum', enum: MediaSource } )
     source: MediaSource
 
-    @ManyToOne( () => User )
-    @JoinColumn({ name: 'creatorId', referencedColumnName: 'id' })
+    @ManyToOne( () => User, { onDelete: "CASCADE" } )
+    @JoinColumn()
     creator: User
 }
