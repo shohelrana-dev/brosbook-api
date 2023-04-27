@@ -11,7 +11,7 @@ import { EmailService } from "@services/email.service"
 import UserService from "@modules/users/user.service"
 import { selectAllColumns } from "@utils/selectAllColumns"
 import { inject, injectable } from "inversify"
-import { appDataSource } from "@config/datasource.conf"
+import { appDataSource } from "@config/datasource.config"
 
 @injectable()
 class AuthService {

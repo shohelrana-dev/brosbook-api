@@ -1,7 +1,7 @@
 import Media from "@entities/Media"
 import isEmpty from "is-empty"
 import { MediaSource } from "@entities/Media"
-import { appDataSource } from "@config/datasource.conf"
+import { appDataSource } from "@config/datasource.config"
 import { v2 as cloudinary } from "cloudinary"
 import { Auth } from "@interfaces/index.interfaces"
 import User from "@entities/User"

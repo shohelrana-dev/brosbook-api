@@ -2,7 +2,7 @@ import { Auth, ListQueryParams, ListResponse } from "@interfaces/index.interface
 import Conversation from "@entities/Conversation"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"
-import { appDataSource } from "@config/datasource.conf"
+import { appDataSource } from "@config/datasource.config"
 import UserService from "@modules/users/user.service"
 import Message, { MessageType } from "@entities/Message"
 import { UploadedFile } from "express-fileupload"

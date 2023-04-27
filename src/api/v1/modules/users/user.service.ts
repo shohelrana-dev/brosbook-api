@@ -17,7 +17,7 @@ import { Brackets, In } from "typeorm"
 import fetch from "cross-fetch"
 import InternalServerException from "@exceptions/InternalServerException"
 import { inject, injectable } from "inversify"
-import { appDataSource } from "@config/datasource.conf"
+import { appDataSource } from "@config/datasource.config"
 import Profile from "@entities/Profile"
 
 @injectable()

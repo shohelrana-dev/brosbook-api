@@ -1,4 +1,4 @@
-import { appDataSource } from "@config/datasource.conf"
+import { appDataSource } from "@config/datasource.config"
 import { Notification, NotificationTypes } from "@entities/Notification"
 import { Auth, ListQueryParams, ListResponse } from "@interfaces/index.interfaces"
 import { paginateMeta } from "@utils/paginateMeta"

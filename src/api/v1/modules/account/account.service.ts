@@ -9,7 +9,7 @@ import UserService from "@modules/users/user.service"
 import { Auth } from "@interfaces/index.interfaces"
 import { selectAllColumns } from "@utils/selectAllColumns"
 import { inject, injectable } from "inversify"
-import { appDataSource } from "@config/datasource.conf"
+import { appDataSource } from "@config/datasource.config"
 
 @injectable()
 export default class AccountService {

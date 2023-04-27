@@ -1,6 +1,6 @@
 //dependencies
-import app from '@config/app.conf'
-import { appDataSource } from "@config/datasource.conf"
+import app from '@config/app.config'
+import { appDataSource } from "@config/datasource.config"
 
 const PORT = process.env.PORT || 4000
 

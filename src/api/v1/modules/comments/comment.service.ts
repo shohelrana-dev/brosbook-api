@@ -4,7 +4,7 @@ import { Auth, ListResponse, ListQueryParams } from "@interfaces/index.interface
 import User from "@entities/User"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"
-import { appDataSource } from "@config/datasource.conf"
+import { appDataSource } from "@config/datasource.config"
 import PostService from "@modules/posts/post.service"
 import CommentLike from "@entities/CommentLike"
 import NotificationService from "@modules/notifications/notification.service"
