@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm'
+import { Entity, Column, ManyToOne } from 'typeorm'
 import { AbstractEntity } from '@entities/AbstractEntity'
 import User from "@entities/User"
 
@@ -34,6 +34,5 @@ export default class Media extends AbstractEntity {
     source: MediaSource
 
     @ManyToOne( () => User )
-    @JoinColumn()
     creator: User
 }
