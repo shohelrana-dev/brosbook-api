@@ -1,7 +1,6 @@
-import { Entity, Column, ManyToOne, JoinColumn, AfterRemove } from 'typeorm'
+import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm'
 import { AbstractEntity } from '@entities/AbstractEntity'
 import User from "@entities/User"
-import { cloudinary } from "@services/media.service"
 
 export enum MediaSource {
     CONVERSATION = 'conversation',
@@ -34,12 +33,7 @@ export default class Media extends AbstractEntity {
     @Column( { type: 'enum', enum: MediaSource } )
     source: MediaSource
 
-    @ManyToOne( () => User, { onDelete: "CASCADE" } )
+    @ManyToOne( () => User )
     @JoinColumn()
     creator: User
-
-    @AfterRemove()
-    async removeFromCloudinary(){
-        await cloudinary.uploader.destroy( this.name )
-    }
 }
