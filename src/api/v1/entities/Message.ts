@@ -24,7 +24,7 @@ class Message extends AbstractEntity {
     @Column( { type: 'enum', enum: MessageType, default: MessageType.TEXT } )
     type: string
 
-    @Column( { type: 'datetime', nullable: true } )
+    @Column( { type: 'date', nullable: true } )
     seenAt: Date
 
     @ManyToOne( () => Conversation, conversation => conversation.messages, { eager: true, onDelete: "CASCADE" } )

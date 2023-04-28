@@ -36,10 +36,10 @@ export default class User extends AbstractEntity {
     @JoinColumn()
     avatar: Media
 
-    @Column( { type: 'tinyint', default: 0 } )
+    @Column( { type: 'boolean', default: false } )
     active: number
 
-    @Column( { type: 'datetime', nullable: true } )
+    @Column( { type: 'date', nullable: true } )
     emailVerifiedAt: string
 
     @OneToOne( () => Profile, ( profile ) => profile.user )

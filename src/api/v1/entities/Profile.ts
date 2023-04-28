@@ -25,7 +25,7 @@ class Profile extends AbstractEntity {
     @Column( { nullable: true } )
     location: string
 
-    @Column( { type: 'datetime', nullable: true } )
+    @Column( { type: 'date', nullable: true } )
     birthdate: string
 
     @OneToOne( () => User, {onDelete: "CASCADE"} )

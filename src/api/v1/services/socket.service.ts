@@ -34,8 +34,12 @@ export default class SocketService {
 
                 connectedUser = user
 
-                //update user activity
-                await userService.makeUserActive(user.id)
+                //update user status
+                try{
+                    await userService.makeUserActive(user.id)
+                }catch(err){
+                    console.log(err)
+                }
             })
 
             socket.on('disconnect', async () => {
@@ -43,8 +47,12 @@ export default class SocketService {
 
                 console.log(`${connectedUser?.username}: disconnected`)
 
-                //update user activity
-                await userService.makeUserInactive(connectedUser?.id)
+                //update user status
+                try{
+                    await userService.makeUserInactive(connectedUser?.id)
+                }catch(err){
+                    console.log(err)
+                }
             })
         })
     }

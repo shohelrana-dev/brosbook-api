@@ -22,7 +22,7 @@ export class Notification extends AbstractEntity {
     @ManyToOne( () => Comment, { onDelete: "CASCADE" } )
     comment: Comment
 
-    @Column( { type: 'datetime', nullable: true } )
+    @Column( { type: 'date', nullable: true } )
     readAt: string
 
     @ManyToOne( () => User, { nullable: false, onDelete: "CASCADE" } )
