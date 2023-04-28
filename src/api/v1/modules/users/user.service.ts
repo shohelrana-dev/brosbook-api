@@ -340,6 +340,8 @@ export default class UserService {
 
         targetUser.isViewerFollow = false
 
+        this.notificationService.delete({ recipient: targetUser, type: NotificationTypes.FOLLOWED }, auth)
+
         return targetUser
     }
 

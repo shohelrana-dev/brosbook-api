@@ -124,7 +124,7 @@ export default class CommentService {
         return comment
     }
 
-    public async unlike( commentId: string ): Promise<Comment>{
+    public async unlike( commentId: string, auth: Auth ): Promise<Comment>{
         if( ! commentId ) throw new BadRequestException( "Comment id is empty." )
 
         const comment = await this.commentRepository.findOneBy( { id: commentId } )
@@ -137,6 +137,8 @@ export default class CommentService {
 
         comment.isViewerLiked = false
         comment.likesCount    = Number( comment.likesCount ) - 1
+
+        this.notificationService.delete({ recipient: comment.author, comment, type: NotificationTypes.LIKED_COMMENT }, auth)
 
         return comment
     }

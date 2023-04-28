@@ -48,7 +48,7 @@ export default class CommentController {
 
     @httpPost( '/:id/unlike', authMiddleware )
     public async unlike( req: Request ): Promise<Comment>{
-        return await this.commentService.unlike( req.params.id )
+        return await this.commentService.unlike( req.params.id, req.auth )
     }
 
 }

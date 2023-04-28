@@ -1,19 +1,19 @@
-import { UploadedFile } from "express-fileupload"
+import {UploadedFile} from "express-fileupload"
 import isEmpty from "is-empty"
 import Post from "@entities/Post"
 import PostLike from "@entities/PostLike"
-import { paginateMeta } from "@utils/paginateMeta"
-import { Auth, ListResponse, PostsQueryParams } from "@interfaces/index.interfaces"
-import { MediaSource } from "@entities/Media"
+import {paginateMeta} from "@utils/paginateMeta"
+import {Auth, ListResponse, PostsQueryParams} from "@interfaces/index.interfaces"
+import {MediaSource} from "@entities/Media"
 import NotFoundException from "@exceptions/NotFoundException"
 import BadRequestException from "@exceptions/BadRequestException"
 import MediaService from "@services/media.service"
 import User from "@entities/User"
-import { appDataSource } from "@config/datasource.config"
+import {appDataSource} from "@config/datasource.config"
 import NotificationService from "@modules/notifications/notification.service"
-import { NotificationTypes } from "@entities/Notification"
+import {NotificationTypes} from "@entities/Notification"
 import UserService from "@modules/users/user.service"
-import { inject, injectable } from "inversify"
+import {inject, injectable} from "inversify"
 
 @injectable()
 export default class PostService {
@@ -198,6 +198,8 @@ export default class PostService {
 
         post.isViewerLiked = false
         post.likesCount    = Number( post.likesCount ) - 1
+
+        this.notificationService.delete({ recipient: post.author, post, type: NotificationTypes.LIKED_POST }, auth)
 
         return post
     }

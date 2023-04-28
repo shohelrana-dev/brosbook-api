@@ -87,4 +87,22 @@ export default class NotificationService {
 
         return notification
     }
+
+    async delete( data: { recipient: User, post?: Post, comment?: Comment, type: NotificationTypes }, auth: Auth ): Promise<Notification>{
+        if( ! data ) throw new BadRequestException( 'Create notification payload is empty.' )
+
+        const { recipient, type, post, comment } = data
+
+        const notification = await this.notificationRepository.findOneBy({
+            initiator: {id: auth.user.id},
+            recipient: {id: recipient.id},
+            type: type,
+            post: post ? {id: post.id} : null,
+            comment: comment ? {id: comment.id} : null
+        })
+
+        await this.notificationRepository.remove(notification)
+
+        return  notification
+    }
 }
