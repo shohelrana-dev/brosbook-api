@@ -111,7 +111,7 @@ export default class UserService {
             relations: ["profile"]
         } )
 
-        if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
+        if( ! user ) throw new NotFoundException( 'User does not exists.' )
 
         await this.formatUser( user, auth )
 
@@ -126,7 +126,7 @@ export default class UserService {
             relations: { profile: true }
         } )
 
-        if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
+        if( ! user ) throw new NotFoundException( 'User does not exists.' )
 
         await this.formatUser( user, auth )
 
@@ -163,7 +163,7 @@ export default class UserService {
 
         const user = await this.userRepository.findOneBy( { id: userId } )
 
-        if( ! user ) throw new NotFoundException( 'User doesn\'t exists.' )
+        if( ! user ) throw new NotFoundException( 'User does not exists.' )
 
         const [media, count] = await this.mediaRepository.findAndCount( {
             where: {
@@ -350,7 +350,7 @@ export default class UserService {
 
         if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
-        user.active = 1
+        user.active = true
 
         await this.userRepository.save( user )
 
@@ -364,7 +364,7 @@ export default class UserService {
 
         if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
-        user.active = 0
+        user.active = false
 
         await this.userRepository.save( user )
 

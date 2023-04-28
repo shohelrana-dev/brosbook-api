@@ -48,7 +48,7 @@ export class IsUsernameOrEmailNotExist implements ValidatorConstraintInterface {
     }
 
     defaultMessage( validationArguments?: ValidationArguments ): string{
-        return 'account doesn\'t exist with this username or email'
+        return 'account does not exist with this username or email'
     }
 }
 

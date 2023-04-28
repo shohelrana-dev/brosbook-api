@@ -62,7 +62,7 @@ export default class PostService {
 
         const post = await this.postRepository.findOneBy( { id: postId } )
 
-        if( ! post ) throw new NotFoundException( 'Post doesn\'t exists.' )
+        if( ! post ) throw new NotFoundException( 'Post does not exists.' )
 
         await this.formatPost( post, auth )
 
@@ -74,7 +74,7 @@ export default class PostService {
 
         const post = await this.postRepository.findOneBy( { id: postId } )
 
-        if( ! post ) throw new NotFoundException( 'Post doesn\'t exists.' )
+        if( ! post ) throw new NotFoundException( 'Post does not exists.' )
 
         await this.postRepository.remove( post )
 
@@ -164,7 +164,7 @@ export default class PostService {
 
         const post = await this.postRepository.findOneBy( { id: postId } )
 
-        if( ! post ) throw new BadRequestException( 'Post doesn\'t exists.' )
+        if( ! post ) throw new BadRequestException( 'Post does not exists.' )
 
         const like = new PostLike()
         like.post  = post
@@ -190,7 +190,7 @@ export default class PostService {
 
         const post = await this.postRepository.findOneBy( { id: postId } )
 
-        if( ! post ) throw new BadRequestException( 'Post doesn\'t exists.' )
+        if( ! post ) throw new BadRequestException( 'Post does not exists.' )
 
         await this.likeRepository.delete( { post: { id: post.id }, user: { id: auth.user.id } } )
 

@@ -28,7 +28,7 @@ export default class AccountService {
 
         const user = await this.userRepository.findOneBy( { id: auth.user.id } )
 
-        if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
+        if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
         const profile = await this.profileRepository.findOneBy( { user: { id: user.id } } )
 

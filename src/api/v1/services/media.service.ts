@@ -59,7 +59,7 @@ export default class MediaService {
 
         const media = await this.mediaRepository.findOneBy( { id: mediaId } )
 
-        if( ! media ) throw new Error( 'Media doesn\'t exists.' )
+        if( ! media ) throw new Error( 'Media does not exists.' )
 
         await cloudinary.uploader.destroy( media.name )
 

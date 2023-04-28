@@ -34,7 +34,7 @@ export default class ConversationService {
         const user        = await this.userRepository.findOneBy( { id: auth.user.id } )
         const participant = await this.userRepository.findOneBy( { id: participantId } )
 
-        if( ! participant ) throw new NotFoundException( 'Participant user doesn\'t exists.' )
+        if( ! participant ) throw new NotFoundException( 'Participant user does not exists.' )
 
         const findConversation = await this.conversationRepository.findOneBy( [
             { user1: { id: user.id }, user2: { id: participant.id } },
@@ -65,29 +65,27 @@ export default class ConversationService {
             .where( 'conversation.id = :conversationId', { conversationId } )
             .getOne()
 
-        if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
+        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
 
 
         return this.formatConversation( conversation, auth )
     }
 
-    public async getConversationByParticipantIdOrCreate( participantId: string, auth: Auth ): Promise<Conversation>{
+    public async getConversationByParticipantId( participantId: string, auth: Auth ): Promise<Conversation>{
         if( ! participantId ) throw new BadRequestException( 'Participant id is empty.' )
 
         const participant = await this.userRepository.findOneBy( { id: participantId } )
-        if( ! participant ) throw new NotFoundException( 'Participant  doesn\'t exists.' )
+        if( ! participant ) throw new NotFoundException( 'Participant  does not exists.' )
 
-        const conversation = await this.conversationRepository.findOneBy( [
-            { user1: { id: auth.user.id }, user2: { id: participantId } },
-            { user1: { id: participantId }, user2: { id: auth.user.id } }
-        ] )
+        const conversation = await this.conversationRepository.findOne( {
+            where: [
+                { user1: { id: auth.user.id }, user2: { id: participantId } },
+                { user1: { id: participantId }, user2: { id: auth.user.id } }
+            ],
+            relations: ['user1', 'user2', 'lastMessage']
+        } )
 
-        if( conversation ) return conversation
-
-        const newConversation = new Conversation()
-        newConversation.user1 = auth.user as User
-        newConversation.user2 = participant
-        await this.conversationRepository.save( newConversation )
+        if( !conversation ) throw new NotFoundException( 'Conversation  not found.' )
 
         return this.formatConversation( conversation, auth )
     }
@@ -96,7 +94,7 @@ export default class ConversationService {
         const skip = limit * ( page - 1 )
 
         const [conversations, count] = await this.conversationRepository.findAndCount( {
-            relations: { user1: true, user2: true, lastMessage: true },
+            relations: ['user1', 'user2', 'lastMessage'],
             where: [
                 { user1: { id: auth.user.id } },
                 { user2: { id: auth.user.id } }
@@ -136,7 +134,7 @@ export default class ConversationService {
 
         const conversation = await this.conversationRepository.findOneBy( { id: conversationId } )
 
-        if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
+        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
 
         const [messages, count] = await this.messageRepository.findAndCount( {
             where: { conversation: { id: conversationId } },
@@ -161,7 +159,7 @@ export default class ConversationService {
             where: { id: conversationId },
             relations: ['user1', 'user2']
         } )
-        if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
+        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
 
         const sender    = await this.userRepository.findOneBy( { id: auth.user.id } )
         const recipient = sender.id === conversation.user1.id ? conversation.user2 : conversation.user1
@@ -209,7 +207,7 @@ export default class ConversationService {
         }
 
         const message = await this.messageRepository.findOneBy( { id: messageId } )
-        if( ! message ) throw new NotFoundException( 'Message doesn\'t exists.' )
+        if( ! message ) throw new NotFoundException( 'Message does not exists.' )
 
         let reaction = await this.reactionRepository.findOneBy( {
             sender: { id: auth.user.id },
@@ -243,7 +241,7 @@ export default class ConversationService {
             ],
             relations: ["user1", "user2", "lastMessage"]
         } )
-        if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
+        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
 
         const participant = conversation.user1.id === auth.user.id ? conversation.user2 : conversation.user1
 
@@ -281,7 +279,7 @@ export default class ConversationService {
             where: { id: conversationId },
             relations: { user1: true, user2: true }
         } )
-        if( ! conversation ) throw new NotFoundException( 'Conversation doesn\'t exists.' )
+        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
 
         const [messages, count] = await this.messageRepository
             .createQueryBuilder( 'message' )

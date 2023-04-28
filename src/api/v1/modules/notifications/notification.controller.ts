@@ -1,6 +1,6 @@
 import NotificationService from "@modules/notifications/notification.service"
 import { Request } from "express"
-import { controller, httpGet, httpPost } from "inversify-express-utils"
+import {controller, httpGet, httpPatch} from "inversify-express-utils"
 import authMiddleware from "@middleware/auth.middleware"
 import { ListResponse } from "@interfaces/index.interfaces"
 import { Notification } from "@entities/Notification"
@@ -29,7 +29,7 @@ export default class NotificationController {
         return { count }
     }
 
-    @httpPost( '/read_all' )
+    @httpPatch( '/read_all' )
     public async readAllNotifications( req: Request ): Promise<{ message: string }>{
         await this.notificationService.readAllNotifications( req.auth )
 

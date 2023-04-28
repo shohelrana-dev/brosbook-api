@@ -50,8 +50,8 @@ export default class ConversationController {
     }
 
     @httpGet( '/by/participant_id/:id' )
-    public async getConversationByParticipantIdOrCreate( req: Request ): Promise<Conversation>{
-        return await this.conversationService.getConversationByParticipantIdOrCreate( req.params.id, req.auth )
+    public async getConversationByParticipantId( req: Request ): Promise<Conversation>{
+        return await this.conversationService.getConversationByParticipantId( req.params.id, req.auth )
     }
 
     @httpGet( '/:conversationId/messages' )

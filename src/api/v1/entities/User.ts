@@ -37,7 +37,7 @@ export default class User extends AbstractEntity {
     avatar: Media
 
     @Column( { type: 'boolean', default: false } )
-    active: number
+    active: boolean
 
     @Column( { type: 'date', nullable: true } )
     emailVerifiedAt: string

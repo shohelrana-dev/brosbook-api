@@ -49,10 +49,10 @@ export default class CommentService {
         if( ! body ) throw new BadRequestException( 'Comment body is empty.' )
 
         const post = await this.postService.postRepository.findOneBy( { id: postId } )
-        if( ! post ) throw new BadRequestException( 'Post doesn\'t exists.' )
+        if( ! post ) throw new BadRequestException( 'Post does not exists.' )
 
         const author = await User.findOneBy( { id: auth.user.id } )
-        if( ! author ) throw new BadRequestException( 'Author doesn\'t exists.' )
+        if( ! author ) throw new BadRequestException( 'Author does not exists.' )
 
 
         const comment  = new Comment()
@@ -81,7 +81,7 @@ export default class CommentService {
             relations: { post: true }
         } )
 
-        if( ! comment ) throw new NotFoundException( 'comment doesn\'t exists.' )
+        if( ! comment ) throw new NotFoundException( 'comment does not exists.' )
 
         if( auth.user.id !== comment.author.id && auth.user.id !== comment.post.author.id ){
             throw new ForbiddenException( 'You are not owner of the comment.' )
@@ -102,7 +102,7 @@ export default class CommentService {
             relations: { post: true }
         } )
 
-        if( ! comment ) throw new NotFoundException( 'Comment doesn\'t exists.' )
+        if( ! comment ) throw new NotFoundException( 'Comment does not exists.' )
 
         const like   = new CommentLike()
         like.comment = comment
@@ -129,7 +129,7 @@ export default class CommentService {
 
         const comment = await this.commentRepository.findOneBy( { id: commentId } )
 
-        if( ! comment ) throw new BadRequestException( 'Comment doesn\'t exists.' )
+        if( ! comment ) throw new BadRequestException( 'Comment does not exists.' )
 
         await this.likeRepository.delete( { comment: { id: comment.id } } )
 

@@ -87,7 +87,7 @@ class AuthService {
 
         let user = await this.userRepository.findOneBy( { email: email } )
 
-        if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
+        if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
         user.password = await argon2.hash( password )
         user          = await this.userRepository.save( user )
@@ -108,7 +108,7 @@ class AuthService {
 
         let user = await this.userRepository.findOneBy( { email } )
 
-        if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
+        if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
         if( user.hasEmailVerified ){
             throw new BadRequestException( 'The email address already verified' )
@@ -124,7 +124,7 @@ class AuthService {
     public async resendEmailVerificationLink( email: string ){
         const user = await this.userRepository.findOneBy( { email } )
 
-        if( ! user ) throw new BadRequestException( 'User doesn\'t exists.' )
+        if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
         await EmailService.sendEmailVerificationLink( user.email, user.username )
     }
