@@ -101,6 +101,8 @@ export default class NotificationService {
             comment: comment ? {id: comment.id} : null
         })
 
+        if(!notification) return
+
         await this.notificationRepository.remove(notification)
 
         return  notification

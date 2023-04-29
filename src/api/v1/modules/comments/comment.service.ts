@@ -104,6 +104,10 @@ export default class CommentService {
 
         if( ! comment ) throw new NotFoundException( 'Comment does not exists.' )
 
+        const liked = await this.likeRepository.findOneBy( { comment: { id: commentId }, user: { id: auth.user.id } } )
+
+        if( liked ) throw new BadRequestException('The user already liked the comment.')
+
         const like   = new CommentLike()
         like.comment = comment
         like.user    = auth.user as User
@@ -131,7 +135,11 @@ export default class CommentService {
 
         if( ! comment ) throw new BadRequestException( 'Comment does not exists.' )
 
-        await this.likeRepository.delete( { comment: { id: comment.id } } )
+        const like = await this.likeRepository.findOneBy( { comment: { id: comment.id }, user: { id: auth.user.id } } )
+
+        if( ! like ) throw new BadRequestException('The user did not like the comment.')
+
+        await this.likeRepository.remove(like)
 
         this.updateCommentLikesCount( comment.id )
 
