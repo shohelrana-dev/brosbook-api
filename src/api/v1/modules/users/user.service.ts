@@ -28,7 +28,9 @@ export default class UserService {
 
     constructor(
         @inject( NotificationService )
-        private readonly notificationService: NotificationService
+        private readonly notificationService: NotificationService,
+        @inject( MediaService )
+        private readonly mediaService: MediaService
     ){}
 
     public async create( userData: CreateUserDTO ): Promise<User>{
@@ -82,7 +84,7 @@ export default class UserService {
             await this.userRepository.save( user )
 
             //save photo
-            user.avatar = await MediaService.save( {
+            user.avatar = await this.mediaService.save( {
                 file: Buffer.from( await ( await fetch( tokenPayload.picture ) ).arrayBuffer() ),
                 source: MediaSource.AVATAR,
                 creator: { id: user.id } as User
@@ -170,6 +172,7 @@ export default class UserService {
                 creator: { id: user.id },
                 source: In( [MediaSource.AVATAR, MediaSource.COVER_PHOTO, MediaSource.POST] )
             },
+            order: {createdAt: "DESC"},
             skip: skip,
             take: limit
         } )
@@ -273,7 +276,7 @@ export default class UserService {
 
         const user = await this.userRepository.findOneBy( { id: auth.user.id } )
 
-        user.avatar = await MediaService.save( {
+        user.avatar = await this.mediaService.save( {
             file: avatar.data,
             creator: auth.user,
             source: MediaSource.AVATAR
@@ -290,7 +293,7 @@ export default class UserService {
 
         if( ! user || ! profile ) throw new BadRequestException( "User does not exists." )
 
-        profile.coverPhoto = await MediaService.save( {
+        profile.coverPhoto = await this.mediaService.save( {
             file: coverPhoto.data,
             creator: auth.user,
             source: MediaSource.COVER_PHOTO

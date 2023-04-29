@@ -24,7 +24,9 @@ export default class PostService {
         @inject( NotificationService )
         public readonly notificationService: NotificationService,
         @inject( UserService )
-        public readonly userService: UserService
+        public readonly userService: UserService,
+        @inject( MediaService )
+        private readonly mediaService: MediaService
     ){}
 
     public async create( postData: { body?: string, image: UploadedFile }, auth: Auth ): Promise<Post>{
@@ -34,7 +36,7 @@ export default class PostService {
 
         if( image ){
             //save image
-            const savedImage = await MediaService.save( {
+            const savedImage = await this.mediaService.save( {
                 file: image.data,
                 creator: auth.user,
                 source: MediaSource.POST
@@ -79,7 +81,7 @@ export default class PostService {
         await this.postRepository.remove( post )
 
         if( post.image ){
-            MediaService.delete( post.image.id )
+            this.mediaService.delete( post.image.id )
         }
 
         return post

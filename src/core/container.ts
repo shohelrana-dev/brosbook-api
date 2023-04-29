@@ -3,29 +3,25 @@ import '@modules/index.controller'
 
 import { Container } from 'inversify'
 import UserService from "@modules/users/user.service"
-import MediaService from "@services/media.service"
 import NotificationService from "@modules/notifications/notification.service"
 import PostService from "@modules/posts/post.service"
 import CommentService from "@modules/comments/comment.service"
 import AuthService from "@modules/auth/auth.service"
-import { EmailService } from "@services/email.service"
 import ConversationService from "@modules/conversations/conversation.service"
 import AccountService from "@modules/account/account.service"
-import SocketService from "@services/socket.service"
+import MediaService from "@services/media.service"
 
 //create an instance of the inversify container
 const container = new Container()
 
 //bind services
-container.bind( AuthService ).toSelf()
-container.bind( UserService ).toSelf()
-container.bind( MediaService ).toSelf()
-container.bind( EmailService ).toSelf()
-container.bind( NotificationService ).toSelf()
-container.bind( PostService ).toSelf()
-container.bind( CommentService ).toSelf()
-container.bind( AccountService ).toSelf()
-container.bind( ConversationService ).toSelf()
-container.bind( SocketService ).to(SocketService)
+container.bind( AuthService ).toSelf().inSingletonScope()
+container.bind( UserService ).toSelf().inSingletonScope()
+container.bind( NotificationService ).toSelf().inSingletonScope()
+container.bind( PostService ).toSelf().inSingletonScope()
+container.bind( CommentService ).toSelf().inSingletonScope()
+container.bind( AccountService ).toSelf().inSingletonScope()
+container.bind( ConversationService ).toSelf().inSingletonScope()
+container.bind( MediaService ).toSelf().inSingletonScope()
 
 export default container

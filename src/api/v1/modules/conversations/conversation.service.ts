@@ -25,7 +25,9 @@ export default class ConversationService {
 
     constructor(
         @inject( UserService )
-        private readonly userService: UserService
+        private readonly userService: UserService,
+        @inject( MediaService )
+        private readonly mediaService: MediaService
     ){}
 
     public async createConversation( participantId: string, auth: Auth ): Promise<Conversation>{
@@ -170,12 +172,13 @@ export default class ConversationService {
         message.type         = type
 
         if( image ){
-            message.image = await MediaService.save( {
+            message.image = await this.mediaService.save( {
                 file: image.data,
                 creator: sender,
                 source: MediaSource.CONVERSATION
             } )
-        } else{
+        }
+        if(body){
             message.body = body
         }
         await this.messageRepository.save( message )
@@ -277,7 +280,7 @@ export default class ConversationService {
 
         const conversation = await this.conversationRepository.findOne( {
             where: { id: conversationId },
-            relations: { user1: true, user2: true }
+            relations: ['user1', 'user2']
         } )
         if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
 
@@ -286,6 +289,7 @@ export default class ConversationService {
             .leftJoinAndSelect( 'message.image', 'image' )
             .where( 'message.conversationId = :conversationId', { conversationId } )
             .andWhere( 'image.id IS NOT NULL' )
+            .orderBy( 'image.createdAt', 'DESC' )
             .take( limit )
             .skip( skip )
             .getManyAndCount()

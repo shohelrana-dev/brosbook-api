@@ -23,9 +23,9 @@ interface SaveMedia {
 
 @injectable()
 export default class MediaService {
-    private static readonly mediaRepository = appDataSource.getRepository( Media )
+    private readonly mediaRepository = appDataSource.getRepository( Media )
 
-    public static async save( { file, creator, source }: SaveMedia ): Promise<Media>{
+    public async save( { file, creator, source }: SaveMedia ): Promise<Media>{
         if( isEmpty( file ) ) throw new Error( 'File is empty.' )
 
         return new Promise( ( resolve, reject ) => {
@@ -36,7 +36,7 @@ export default class MediaService {
                 width: 1920,
                 crop: "limit"
             }, async( err, result ) => {
-                if( err ) reject( err )
+                if( err ) return reject( err )
 
                 const media   = new Media()
                 media.url     = result.secure_url
@@ -47,6 +47,7 @@ export default class MediaService {
                 media.size    = result.bytes
                 media.source  = source
                 media.creator = creator as User
+
                 await this.mediaRepository.save( media )
 
                 resolve( media )
@@ -54,7 +55,7 @@ export default class MediaService {
         } )
     }
 
-    public static async delete( mediaId: string ): Promise<Media>{
+    public async delete( mediaId: string ): Promise<Media>{
         if( ! mediaId ) throw new Error( 'Media id is empty.' )
 
         const media = await this.mediaRepository.findOneBy( { id: mediaId } )
