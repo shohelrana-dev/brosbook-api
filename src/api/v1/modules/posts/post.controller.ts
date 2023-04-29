@@ -33,9 +33,9 @@ export default class PostController {
     public async getPosts( req: Request ): Promise<ListResponse<Post>>{
         const page   = Number( req.query.page || 1 )
         const limit  = Number( req.query.limit || 6 )
-        const userId = req.params.userId
+        const authorId = req.query.authorId as string
 
-        return await this.postService.getPosts( { userId, page, limit }, req.auth )
+        return await this.postService.getPosts( { authorId, page, limit }, req.auth )
     }
 
     @httpGet( '/feed' )

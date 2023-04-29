@@ -86,10 +86,10 @@ export default class PostService {
     }
 
     public async getPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
-        const { userId, page, limit } = params
+        const { authorId, page, limit } = params
         const skip                    = limit * ( page - 1 )
 
-        if( userId ){
+        if( authorId ){
             return await this.getUserPosts( params, auth )
         }
 
@@ -109,14 +109,14 @@ export default class PostService {
     }
 
     public async getUserPosts( params: PostsQueryParams, auth: Auth ): Promise<ListResponse<Post>>{
-        const userId = params.userId
+        const authorId = params.authorId
         const page   = params.page || 1
         const limit  = params.limit || 6
         const skip   = limit * ( page - 1 )
 
-        if( ! userId ) throw new BadRequestException( "User id is empty." )
+        if( ! authorId ) throw new BadRequestException( "Author id is empty." )
 
-        const user = await User.findOneBy( { id: userId } )
+        const user = await User.findOneBy( { id: authorId } )
         if( ! user ) throw new BadRequestException( "User doesn't exists." )
 
         const [posts, count] = await this.postRepository
@@ -124,7 +124,7 @@ export default class PostService {
             .leftJoinAndSelect( 'post.author', 'author' )
             .leftJoinAndSelect( 'author.avatar', 'avatar' )
             .leftJoinAndSelect( 'post.image', 'image' )
-            .where( 'author.id = :authorId', { authorId: userId } )
+            .where( 'author.id = :authorId', { authorId } )
             .orderBy( 'post.createdAt', 'DESC' )
             .skip( skip )
             .take( limit )
@@ -166,6 +166,10 @@ export default class PostService {
 
         if( ! post ) throw new BadRequestException( 'Post does not exists.' )
 
+        const liked = await this.likeRepository.findOneBy( { post: { id: post.id }, user: { id: auth.user.id } } )
+
+        if( liked ) throw new BadRequestException('The user already liked the post.')
+
         const like = new PostLike()
         like.post  = post
         like.user  = auth.user as User
@@ -192,7 +196,11 @@ export default class PostService {
 
         if( ! post ) throw new BadRequestException( 'Post does not exists.' )
 
-        await this.likeRepository.delete( { post: { id: post.id }, user: { id: auth.user.id } } )
+        const like = await this.likeRepository.findOneBy( { post: { id: post.id }, user: { id: auth.user.id } } )
+
+        if( ! like ) throw new BadRequestException('The user did not like the post.')
+
+        await this.likeRepository.remove(like)
 
         this.updatePostLikesCount( post )
 

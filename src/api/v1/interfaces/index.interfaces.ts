@@ -35,5 +35,5 @@ export interface SearchQueryParams extends ListQueryParams {
 }
 
 export interface PostsQueryParams extends ListQueryParams {
-    userId?: string
+    authorId?: string
 }
