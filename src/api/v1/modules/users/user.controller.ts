@@ -67,9 +67,11 @@ export default class UserController {
 
     @httpGet( '/:userId/media' )
     public async getUserMediaList( req: Request ): Promise<ListResponse<Media>>{
+        const page   = Number( req.query.page || 1 )
+        const limit  = Number( req.query.limit || 16 )
         const userId = req.params.userId as string
 
-        return await this.usersService.getUserMediaList( userId, req.query )
+        return await this.usersService.getUserMediaList( userId, {page, limit} )
     }
 
     @httpGet( '/:userId/followers' )
