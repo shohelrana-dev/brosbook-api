@@ -4,6 +4,8 @@ import { controller, httpPatch } from "inversify-express-utils"
 import authMiddleware from "@middleware/auth.middleware"
 import { inject } from "inversify"
 import User from "@entities/User"
+import dtoValidationMiddleware from "@middleware/dto-validation.middleware"
+import {ChangePasswordDTO, ChangeUsernameDTO, UpdateProfileDTO} from "@modules/account/account.dto"
 
 /**
  * @class AccountController
@@ -17,17 +19,17 @@ export default class AccountController {
         private readonly accountService: AccountService
     ){}
 
-    @httpPatch( '/profile' )
+    @httpPatch( '/profile', dtoValidationMiddleware(UpdateProfileDTO) )
     public async updateProfile( req: Request ): Promise<User>{
         return await this.accountService.updateProfile( req.body, req.auth )
     }
 
-    @httpPatch( '/username' )
+    @httpPatch( '/username', dtoValidationMiddleware(ChangeUsernameDTO) )
     public async changeUsername( req: Request ): Promise<User>{
         return await this.accountService.changeUsername( req.body, req.auth )
     }
 
-    @httpPatch( '/password' )
+    @httpPatch( '/password', dtoValidationMiddleware(ChangePasswordDTO))
     public async changePassword( req: Request ): Promise<{ message: string }>{
         await this.accountService.changePassword( req.body, req.auth )
 
