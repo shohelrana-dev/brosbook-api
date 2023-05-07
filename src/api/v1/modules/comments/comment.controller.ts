@@ -2,7 +2,7 @@ import { Request, Response } from "express"
 import CommentService from "./comment.service"
 import { inject } from "inversify"
 import { controller, httpDelete, httpGet, httpPost } from "inversify-express-utils"
-import { ListResponse } from "@interfaces/index.interfaces"
+import { ListResponse } from "@utils/types"
 import Comment from "@entities/Comment"
 import authMiddleware from "@middleware/auth.middleware"
 

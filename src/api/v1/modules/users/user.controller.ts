@@ -5,7 +5,7 @@ import { inject } from "inversify"
 import { controller, httpGet, httpPost } from "inversify-express-utils"
 import authMiddleware from "@middleware/auth.middleware"
 import User from "@entities/User"
-import { ListResponse } from "@interfaces/index.interfaces"
+import { ListResponse } from "@utils/types"
 import Media from "@entities/Media"
 
 /**

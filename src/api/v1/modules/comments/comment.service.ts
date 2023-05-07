@@ -1,6 +1,6 @@
 import Comment from "@entities/Comment"
 import { paginateMeta } from "@utils/paginateMeta"
-import { Auth, ListResponse, ListQueryParams } from "@interfaces/index.interfaces"
+import { Auth, ListResponse, ListQueryParams } from "@utils/types"
 import User from "@entities/User"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"

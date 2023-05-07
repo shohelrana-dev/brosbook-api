@@ -27,7 +27,7 @@
       "noFallthroughCasesInSwitch": true,
       "resolveJsonModule": true,
       "typeRoots": [
-         "src/api/v1/interfaces",
+         "src/api/v1/types",
          "node_modules/@types"
       ],
       "allowJs": false,

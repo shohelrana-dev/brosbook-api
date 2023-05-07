@@ -13,7 +13,7 @@ export enum MessageType {
 }
 
 @Entity( 'messages' )
-class Message extends AbstractEntity {
+export default class Message extends AbstractEntity {
     @Column( { type: 'text', nullable: true } )
     body: string
 
@@ -40,6 +40,5 @@ class Message extends AbstractEntity {
 
     //virtual columns
     isMeSender: boolean
+    recipient: User
 }
-
-export default Message

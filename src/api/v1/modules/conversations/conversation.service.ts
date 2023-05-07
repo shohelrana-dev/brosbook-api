@@ -1,20 +1,16 @@
-import { Auth, ListQueryParams, ListResponse } from "@interfaces/index.interfaces"
+import { Auth, ListQueryParams, ListResponse } from "@utils/types"
 import Conversation from "@entities/Conversation"
 import BadRequestException from "@exceptions/BadRequestException"
 import NotFoundException from "@exceptions/NotFoundException"
 import { appDataSource } from "@config/datasource.config"
 import UserService from "@modules/users/user.service"
-import Message, { MessageType } from "@entities/Message"
-import { UploadedFile } from "express-fileupload"
-import isEmpty from "is-empty"
+import Message from "@entities/Message"
 import Reaction from "@entities/Reaction"
 import User from "@entities/User"
 import { paginateMeta } from "@utils/paginateMeta"
 import MediaService from "@services/media.service"
-import Media, { MediaSource } from "@entities/Media"
-import { Brackets, IsNull } from "typeorm"
+import Media  from "@entities/Media"
 import { inject, injectable } from "inversify"
-import SocketService from "@services/socket.service"
 
 @injectable()
 export default class ConversationService {
@@ -70,7 +66,7 @@ export default class ConversationService {
         if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
 
 
-        return this.formatConversation( conversation, auth )
+        return await this.formatConversation( conversation, auth )
     }
 
     public async getConversationByParticipantId( participantId: string, auth: Auth ): Promise<Conversation>{
@@ -89,186 +85,53 @@ export default class ConversationService {
 
         if( !conversation ) throw new NotFoundException( 'Conversation  not found.' )
 
-        return this.formatConversation( conversation, auth )
+        return await this.formatConversation( conversation, auth )
     }
 
     public async getConversations( { page, limit }: ListQueryParams, auth: Auth ): Promise<ListResponse<Conversation>>{
         const skip = limit * ( page - 1 )
+        //.addSelect('COUNT(CASE WHEN message.seenAt IS NULL AND messageSender.id != :userId THEN 1 END)', 'unreadCount')
 
-        const [conversations, count] = await this.conversationRepository.findAndCount( {
-            relations: ['user1', 'user2', 'lastMessage'],
-            where: [
-                { user1: { id: auth.user.id } },
-                { user2: { id: auth.user.id } }
-            ],
-            order: { updatedAt: "DESC" },
-            take: limit,
-            skip
-        } )
+        const [conversations, count] = await this.conversationRepository.createQueryBuilder('conversation')
+            .setParameter('currentUserId', auth.user.id)
+            .leftJoinAndSelect('conversation.user1', 'user1')
+            .leftJoinAndSelect('conversation.user2', 'user2')
+            .leftJoinAndSelect('conversation.lastMessage', 'lastMessage')
+            .leftJoinAndSelect('lastMessage.sender', 'lastMessageSender')
+            .where('(user1.id = :currentUserId OR user2.id = :currentUserId)')
+            .orderBy('conversation.updatedAt', 'DESC')
+            .take(limit)
+            .skip(skip)
+            .getManyAndCount()
 
-        const formatConversations = conversations.map( conversation => this.formatConversation( conversation, auth ) )
+        await this.formatConversations( conversations, auth )
 
-        return { items: formatConversations, ...paginateMeta( count, page, limit ) }
+        return { items: conversations, ...paginateMeta( count, page, limit ) }
     }
 
     public async getUnreadConversationsCount( userId: string ): Promise<number>{
         return await this.conversationRepository.createQueryBuilder( 'conversation' )
+            .setParameter('userId', userId)
             .innerJoin( "conversation.user1", "user1" )
             .innerJoin( "conversation.user2", "user2" )
             .innerJoin( "conversation.lastMessage", "lastMessage" )
             .innerJoin( "lastMessage.sender", "lastMessageSender" )
             .where( "lastMessage.seenAt IS NULL" )
-            .andWhere( "lastMessageSender.id != :userId", { userId } )
-            .andWhere( new Brackets( qb => {
-                qb.where( 'user1.id = :userId', { userId } )
-                qb.orWhere( 'user2.id = :userId', { userId } )
-            } ) )
+            .andWhere( "lastMessageSender.id != :userId" )
+            .andWhere('(user1.id = :userId OR user2.id = :userId)')
             .groupBy( 'conversation.id' )
             .getCount()
     }
 
-    public async getMessages( conversationId: string, params: ListQueryParams, auth: Auth ): Promise<ListResponse<Message>>{
-        if( ! conversationId ) throw new BadRequestException( 'ConversationId id is empty.' )
-
-        const page  = params.page
-        const limit = params.limit
-        const skip  = limit * ( page - 1 )
-
-        const conversation = await this.conversationRepository.findOneBy( { id: conversationId } )
-
-        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
-
-        const [messages, count] = await this.messageRepository.findAndCount( {
-            where: { conversation: { id: conversationId } },
-            order: { createdAt: "desc" },
-            take: limit,
-            skip
-        } )
-
-        const formattedMessages = messages.map( msg => this.formatMessage( msg, auth ) )
-
-        return { items: formattedMessages, ...paginateMeta( count, page, limit ) }
-    }
-
-    public async sendMessage( conversationId: string, messageData: { image: UploadedFile, body: string, type: MessageType }, auth: Auth ): Promise<Message>{
-        if( ! conversationId ) throw new BadRequestException( 'ConversationId id is empty.' )
-
-        const { image, body, type } = messageData
-
-        if( ! body && ! image ) throw new BadRequestException( 'Message data is empty.' )
-
-        const conversation = await this.conversationRepository.findOne( {
-            where: { id: conversationId },
-            relations: ['user1', 'user2']
-        } )
-        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
-
-        const sender    = await this.userRepository.findOneBy( { id: auth.user.id } )
-        const recipient = sender.id === conversation.user1.id ? conversation.user2 : conversation.user1
-
-        const message        = new Message()
-        message.conversation = { id: conversation.id } as Conversation
-        message.sender       = sender
-        message.type         = type
-
-        if( image ){
-            message.image = await this.mediaService.save( {
-                file: image.data,
-                creator: sender,
-                source: MediaSource.CONVERSATION
-            } )
-        }
-        if(body){
-            message.body = body
-        }
-        await this.messageRepository.save( message )
-
-        SocketService.emit( `message.new.${ conversation.id }`, message )
-
-        conversation.lastMessage = { id: message.id } as Message
-        await this.conversationRepository.save( conversation )
-
-        this.getUnreadConversationsCount( recipient.id ).then( ( count ) => {
-            if( count > 0 ){
-                SocketService.emit( `conversation.unread.count.${ recipient.id }`, count )
-            }
-        } )
-
-        return message
-    }
-
-    public async sendReaction( reactionData: { messageId: string, name: string }, auth: Auth ): Promise<Message>{
-        const { messageId, name } = reactionData
-
-        if( isEmpty( reactionData ) ) throw new BadRequestException( 'Reaction data is empty.' )
-        if( ! messageId ) throw new BadRequestException( 'messageId id is empty.' )
-
-        const reactionNames = ["like", "love", "angry", "sad", "smile", "wow"]
-
-        if( ! reactionNames.includes( name ) ){
-            throw new BadRequestException( 'Invalid reaction.' )
-        }
-
-        const message = await this.messageRepository.findOneBy( { id: messageId } )
-        if( ! message ) throw new NotFoundException( 'Message does not exists.' )
-
-        let reaction = await this.reactionRepository.findOneBy( {
-            sender: { id: auth.user.id },
-            message: { id: message.id },
-        } )
-
-        if( reaction ){
-            reaction.name = name
-        } else{
-            reaction         = new Reaction()
-            reaction.name    = name
-            reaction.sender  = auth.user as User
-            reaction.message = message
-        }
-        await this.reactionRepository.save( reaction )
-
-        message.reactions = await this.reactionRepository.findBy( { message: { id: messageId } } )
-
-        SocketService.emit( `message.update.${ message.conversation.id }`, message )
-
-        return message
-    }
-
-    public async seenAllMessages( conversationId: string, auth: Auth ): Promise<void>{
-        if( ! conversationId ) throw new BadRequestException( 'Conversation id is empty.' )
-
-        const conversation = await this.conversationRepository.findOne( {
-            where: [
-                { id: conversationId, user1: { id: auth.user.id } },
-                { id: conversationId, user2: { id: auth.user.id } }
-            ],
-            relations: ["user1", "user2", "lastMessage"]
-        } )
-        if( ! conversation ) throw new NotFoundException( 'Conversation does not exists.' )
-
-        const participant = conversation.user1.id === auth.user.id ? conversation.user2 : conversation.user1
-
-        const messages = await this.messageRepository.findBy( {
-            conversation: { id: conversationId },
-            sender: { id: participant.id },
-            seenAt: IsNull()
-        } )
-
-        if( messages.length > 0 ){
-            await this.messageRepository.update( {
-                conversation: { id: conversationId },
-                sender: { id: participant.id }
-            }, {
-                seenAt: new Date( Date.now() )
-            } )
-
-            SocketService.emit( `conversation.unread.count.${ auth.user.id }`, await this.getUnreadConversationsCount( auth.user.id ) )
-
-
-            const message = await this.messageRepository.findOneBy( { id: conversation.lastMessage.id } )
-            SocketService.emit( `message.seen.${ conversation.id }`, message )
-        }
-
+    public async getConversationUnreadMessagesCount( conversationId: string, auth: Auth ): Promise<number>{
+        return await this.messageRepository.createQueryBuilder( 'message' )
+            .innerJoin( "message.conversation", "conversation" )
+            .innerJoin( "message.sender", "sender" )
+            .where('conversation.id = :conversationId', {conversationId})
+            .andWhere( "sender.id != :senderId", {senderId: auth.user.id} )
+            .andWhere( "message.seenAt IS NULL" )
+            .groupBy( 'message.id' )
+            .getCount()
     }
 
     public async getConversationMedia( conversationId: string, params: ListQueryParams ): Promise<ListResponse<Media>>{
@@ -299,18 +162,23 @@ export default class ConversationService {
         return { items: mediaList, ...paginateMeta( count, page, limit ) }
     }
 
-    public formatConversation( conversation: Conversation, auth: Auth ): Conversation{
+    public async formatConversation( conversation: Conversation, auth: Auth ): Promise<Conversation>{
         if( conversation.user1.id === auth.user.id ){
             conversation.participant = conversation.user2
         } else{
             conversation.participant = conversation.user1
         }
+
+        conversation.unreadMessagesCount = await this.getConversationUnreadMessagesCount(conversation.id, auth)
+
         return conversation
     }
 
-    public formatMessage( message: Message, auth: Auth ): Message{
-        message.isMeSender = message.sender.id === auth.user.id
+    public async formatConversations( conversations: Conversation[], auth: Auth ): Promise<Conversation[]>{
+        for ( const conversation of conversations ) {
+            await this.formatConversation( conversation, auth )
+        }
 
-        return message
+        return conversations
     }
 }

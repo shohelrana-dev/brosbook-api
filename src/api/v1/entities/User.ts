@@ -93,9 +93,4 @@ export default class User extends AbstractEntity {
             this.avatar = { url: `${ process.env.SERVER_URL }/avatar.png` } as Media
         }
     }
-
-    @AfterInsert()
-    createProfile(){
-        Profile.create( { user: { id: this.id } } ).save()
-    }
 }

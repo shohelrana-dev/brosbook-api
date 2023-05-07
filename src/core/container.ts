@@ -10,6 +10,7 @@ import AuthService from "@modules/auth/auth.service"
 import ConversationService from "@modules/conversations/conversation.service"
 import AccountService from "@modules/account/account.service"
 import MediaService from "@services/media.service"
+import MessageService from "@modules/messages/message.service"
 
 //create an instance of the inversify container
 const container = new Container()
@@ -22,6 +23,7 @@ container.bind( PostService ).toSelf().inSingletonScope()
 container.bind( CommentService ).toSelf().inSingletonScope()
 container.bind( AccountService ).toSelf().inSingletonScope()
 container.bind( ConversationService ).toSelf().inSingletonScope()
+container.bind( MessageService ).toSelf().inSingletonScope()
 container.bind( MediaService ).toSelf().inSingletonScope()
 
 export default container

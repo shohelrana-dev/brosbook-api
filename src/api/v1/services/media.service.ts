@@ -3,7 +3,7 @@ import isEmpty from "is-empty"
 import { MediaSource } from "@entities/Media"
 import { appDataSource } from "@config/datasource.config"
 import { v2 as cloudinary } from "cloudinary"
-import { Auth } from "@interfaces/index.interfaces"
+import { Auth } from "@utils/types"
 import User from "@entities/User"
 import { injectable } from "inversify"
 

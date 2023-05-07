@@ -6,7 +6,7 @@ import UnprocessableEntityException from "@exceptions/UnprocessableEntityExcepti
 import { ChangePasswordDTO, ChangeUsernameDTO, UpdateProfileDTO } from "@modules/account/account.dto"
 import isEmpty from "is-empty"
 import UserService from "@modules/users/user.service"
-import { Auth } from "@interfaces/index.interfaces"
+import { Auth } from "@utils/types"
 import { selectAllColumns } from "@utils/selectAllColumns"
 import { inject, injectable } from "inversify"
 import { appDataSource } from "@config/datasource.config"
@@ -30,7 +30,11 @@ export default class AccountService {
 
         if( ! user ) throw new BadRequestException( 'User does not exists.' )
 
-        const profile = await this.profileRepository.findOneBy( { user: { id: user.id } } )
+        let profile = await this.profileRepository.findOneBy( { user: { id: user.id } } )
+
+        if(!profile){
+            profile = new Profile()
+        }
 
         profile.bio       = bio
         profile.phone     = phone

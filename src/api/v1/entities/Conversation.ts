@@ -4,7 +4,7 @@ import User from "./User"
 import Message from "./Message"
 
 @Entity( 'conversations' )
-class Conversation extends AbstractEntity {
+export default class Conversation extends AbstractEntity {
     @ManyToOne( () => User, { onDelete: "CASCADE" } )
     user1: User
 
@@ -20,6 +20,5 @@ class Conversation extends AbstractEntity {
 
     //virtual column
     participant: User
+    unreadMessagesCount: number
 }
-
-export default Conversation

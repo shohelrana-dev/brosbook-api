@@ -2,7 +2,7 @@ import NotificationService from "@modules/notifications/notification.service"
 import { Request } from "express"
 import {controller, httpGet, httpPatch} from "inversify-express-utils"
 import authMiddleware from "@middleware/auth.middleware"
-import { ListResponse } from "@interfaces/index.interfaces"
+import { ListResponse } from "@utils/types"
 import { Notification } from "@entities/Notification"
 
 /**

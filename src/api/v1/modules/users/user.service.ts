@@ -1,7 +1,7 @@
 import { UploadedFile } from "express-fileupload"
 import User from "@entities/User"
 import { paginateMeta } from "@utils/paginateMeta"
-import { Auth, ListQueryParams, ListResponse, SearchQueryParams } from "@interfaces/index.interfaces"
+import { Auth, ListQueryParams, ListResponse, SearchQueryParams } from "@utils/types"
 import BadRequestException from "@exceptions/BadRequestException"
 import Media, { MediaSource } from "@entities/Media"
 import MediaService from "@services/media.service"

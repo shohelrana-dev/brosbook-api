@@ -5,7 +5,7 @@ import dtoValidationMiddleware from "@middleware/dto-validation.middleware"
 import { CreateUserDTO, ForgotPasswordDTO, LoginUserDTO, ResetPasswordDTO } from "@modules/auth/auth.dto"
 import { Request, Response } from "express"
 import User from "@entities/User"
-import { LoginTokenPayload } from "@interfaces/index.interfaces"
+import { LoginTokenPayload } from "@utils/types"
 
 /**
  * @class AuthController

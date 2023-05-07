@@ -1,59 +1,81 @@
-import {Server as HttpServer} from 'http'
-import {Server as SocketIOServer, Socket} from 'socket.io'
+import { Server as HttpServer } from 'http'
+import { Server as SocketIOServer, Socket } from 'socket.io'
 import UserService from "@modules/users/user.service"
 import User from "@entities/User"
 import container from "@core/container"
+import Message from "@entities/Message"
 
 export default class SocketService {
     private static io: SocketIOServer
+    private static connectedSockets = new Map<string, Socket>()
 
-    public static start(server: HttpServer) {
-        this.io = new SocketIOServer(server, {
+
+    public static start( server: HttpServer ) {
+        SocketService.io = new SocketIOServer( server, {
             cors: {
-                credentials: true,
                 origin: process.env.CLIENT_URL,
-                optionsSuccessStatus: 200
+                optionsSuccessStatus: 200,
             }
-        })
+        } )
 
-        this.updateUserStatus()
+        SocketService.io.on( 'connection', SocketService.onConnection )
     }
 
-    public static emit(event: string, ...args: any[]) {
-        this.io.emit(event, ...args)
+    public static emit( event: string, data: any ) {
+        if ( event === 'message.new' || event === 'message.update' || event === 'message.seen' ) {
+            SocketService.emitMessage( event, data )
+            return
+        }
+
+        SocketService.io.emit( event, data )
     }
 
-    private static updateUserStatus() {
-        const userService = container.get(UserService)
+    private static onConnection( socket: Socket ) {
+        const userService = container.get( UserService )
+        let connectedUser: User
 
-        this.io.on('connection', (socket: Socket) => {
-            let connectedUser: User | undefined
+        socket.on( 'user.connect', async ( user: User ) => {
+            if ( !user?.id ) return
 
-            socket.on('connect_user', async (user: User) => {
-                console.log(`${user.username}: connected`)
+            console.log( `${ user.username }: connected` )
 
-                connectedUser = user
+            //store user socket
+            SocketService.connectedSockets.set( user.id, socket )
+            connectedUser = user
 
-                //update user status
-                try{
-                    await userService.makeUserActive(user.id)
-                }catch(err){
-                    console.log(err)
-                }
-            })
+            //update user status
+            try {
+                await userService.makeUserActive( user.id )
+            } catch ( err ) {
+                console.log( err )
+            }
+        } )
 
-            socket.on('disconnect', async () => {
-                if (!connectedUser) return
+        socket.on( 'disconnect', async () => {
+            SocketService.connectedSockets.delete( connectedUser?.id! )
 
-                console.log(`${connectedUser?.username}: disconnected`)
+            if ( !connectedUser?.id ) return
 
-                //update user status
-                try{
-                    await userService.makeUserInactive(connectedUser?.id)
-                }catch(err){
-                    console.log(err)
-                }
-            })
-        })
+            console.log( `${ connectedUser.username }: disconnected` )
+
+            //update user status
+            try {
+                await userService.makeUserInactive( connectedUser.id )
+            } catch ( err ) {
+                console.log( err )
+            }
+        } )
+    }
+
+    private static emitMessage( event: string, message: Message ) {
+        if ( !message?.id ) throw new Error( 'Message data is empty.' )
+        if ( !message.sender?.id ) throw new Error( 'Message sender is empty.' )
+        if ( !message.recipient?.id ) throw new Error( 'Message recipient is empty.' )
+
+        const senderSocket    = SocketService.connectedSockets.get( message.sender.id )
+        const recipientSocket = SocketService.connectedSockets.get( message.recipient.id )
+
+        if ( senderSocket ) senderSocket.emit( event, message )
+        if ( recipientSocket ) recipientSocket.emit( event, message )
     }
 }

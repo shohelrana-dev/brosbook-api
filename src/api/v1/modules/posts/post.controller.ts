@@ -4,7 +4,7 @@ import { UploadedFile } from "express-fileupload"
 import { inject } from "inversify"
 import { controller, httpDelete, httpGet, httpPost } from "inversify-express-utils"
 import authMiddleware from "@middleware/auth.middleware"
-import { ListResponse } from "@interfaces/index.interfaces"
+import { ListResponse } from "@utils/types"
 import Post from "@entities/Post"
 
 /**
