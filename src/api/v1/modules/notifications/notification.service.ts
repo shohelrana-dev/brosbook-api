@@ -3,7 +3,6 @@ import { Notification, NotificationTypes } from "@entities/Notification"
 import { Auth, ListQueryParams, ListResponse } from "@utils/types"
 import { paginateMeta } from "@utils/paginateMeta"
 import BadRequestException from "@exceptions/BadRequestException"
-import isEmpty from "is-empty"
 import User from "@entities/User"
 import Post from "@entities/Post"
 import Comment from "@entities/Comment"
@@ -36,28 +35,20 @@ export default class NotificationService {
         } )
     }
 
-    async updateNotification( notificationId: string ): Promise<Notification>{
-        if( ! notificationId ) throw new BadRequestException( 'Notification id is empty.' )
-
-        const notification = await this.notificationRepository.findOneBy( { id: notificationId } )
-
-        if( isEmpty( notification ) ) throw new BadRequestException( 'Notification does not exists.' )
-
-        notification.readAt = new Date( Date.now() ).toISOString()
-        await this.notificationRepository.save( notification )
-
-        return notification
-    }
-
-    async readAllNotifications( auth: Auth ){
-        await this.notificationRepository.update( {
+    async readNotifications( auth: Auth ){
+        const notifications = await this.notificationRepository.findBy( {
             recipient: { id: auth.user.id },
             readAt: IsNull()
-        }, {
-            readAt: new Date( Date.now() ).toISOString()
         } )
 
-        SocketService.emit( `notification.unread.count.${ auth.user.id }`, 0 )
+        if(notifications && notifications.length > 0){
+            for(const notification of notifications){
+                notification.readAt = new Date( Date.now() ).toISOString()
+                await this.notificationRepository.save(notification)
+            }
+        }
+
+        return notifications
     }
 
     async create( data: { recipient: User, post?: Post, comment?: Comment, type: NotificationTypes }, auth: Auth ): Promise<Notification>{

@@ -1,4 +1,4 @@
-/* All Controller Import */
+/* Import All Controller */
 import '@modules/index.controller'
 
 import { Container } from 'inversify'

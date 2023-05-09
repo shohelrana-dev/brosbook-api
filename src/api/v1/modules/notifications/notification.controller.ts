@@ -4,6 +4,7 @@ import {controller, httpGet, httpPatch} from "inversify-express-utils"
 import authMiddleware from "@middleware/auth.middleware"
 import { ListResponse } from "@utils/types"
 import { Notification } from "@entities/Notification"
+import SocketService from "@services/socket.service"
 
 /**
  * @class NotificationController
@@ -30,9 +31,11 @@ export default class NotificationController {
     }
 
     @httpPatch( '/read_all' )
-    public async readAllNotifications( req: Request ): Promise<{ message: string }>{
-        await this.notificationService.readAllNotifications( req.auth )
+    public async readNotifications( req: Request ): Promise<Notification[]>{
+        const notifications = await this.notificationService.readNotifications( req.auth )
 
-        return { message: 'success' }
+        SocketService.emit( `notification.unread.count.${ req.auth.user.id }`, 0)
+
+        return notifications
     }
 }
