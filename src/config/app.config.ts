@@ -21,7 +21,6 @@ import { InversifyExpressServer } from "inversify-express-utils"
 import container from "@core/container"
 import { createServer } from "http"
 import SocketService from "@services/socket.service"
-import { load } from "inversify-express-doc"
 
 const server = new InversifyExpressServer( container, undefined, { rootPath: '/api/v1' } )
 
@@ -51,9 +50,6 @@ server.setConfig( app => {
 
 //build app
 const app = server.build()
-
-//load api doc
-load(container)
 
 //create a http server instance
 const httpServer = createServer( app )
