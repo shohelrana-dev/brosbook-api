@@ -28,6 +28,7 @@
     "express-fileupload": "^1.2.1",
     "google-auth-library": "^8.5.2",
     "inversify": "^6.0.1",
+    "inversify-express-doc": "^1.4.6",
     "inversify-express-utils": "^6.4.3",
     "is-empty": "^1.2.0",
     "jsonwebtoken": "^8.5.1",
