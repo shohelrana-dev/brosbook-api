@@ -79,6 +79,7 @@ export default class UserService {
             user                 = new User()
             user.firstName       = tokenPayload.given_name
             user.lastName        = tokenPayload.family_name || tokenPayload.given_name
+            user.fullName        = `${ user.firstName } ${ user.lastName }`
             user.email           = tokenPayload.email
             user.emailVerifiedAt = new Date( Date.now() ).toISOString()
             user.password        = uuid()
