@@ -43,7 +43,7 @@ export default class AuthController {
         await this.authService.forgotPassword( email )
 
         return {
-            message: `We've sent an email to ${ email } with a link to get back into your account.`
+            message: `An email has been sent to your email to reset your password.`
         }
     }
 
