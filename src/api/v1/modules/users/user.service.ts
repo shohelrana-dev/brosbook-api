@@ -338,6 +338,8 @@ export default class UserService {
         const [followers, count] = await this.userRepository
             .createQueryBuilder( 'user' )
             .leftJoin( 'user.followings', 'following' )
+            .leftJoinAndSelect( 'user.avatar', 'avatar' )
+            .leftJoinAndSelect( 'user.profile', 'profile' )
             .where( 'following.id = :userId', { userId } )
             .skip( skip )
             .take( limit )
@@ -366,6 +368,8 @@ export default class UserService {
         const [followings, count] = await this.userRepository
             .createQueryBuilder( 'user' )
             .leftJoin( 'user.followers', 'follower' )
+            .leftJoinAndSelect( 'user.avatar', 'avatar' )
+            .leftJoinAndSelect( 'user.profile', 'profile' )
             .where( 'follower.id = :userId', { userId } )
             .skip( skip )
             .take( limit )
