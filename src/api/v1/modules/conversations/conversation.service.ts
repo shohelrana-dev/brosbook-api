@@ -96,6 +96,8 @@ export default class ConversationService {
             .setParameter('currentUserId', auth.user.id)
             .leftJoinAndSelect('conversation.user1', 'user1')
             .leftJoinAndSelect('conversation.user2', 'user2')
+            .leftJoinAndSelect('user1.avatar', 'avatar1')
+            .leftJoinAndSelect('user2.avatar', 'avatar2')
             .leftJoinAndSelect('conversation.lastMessage', 'lastMessage')
             .leftJoinAndSelect('lastMessage.sender', 'lastMessageSender')
             .where('(user1.id = :currentUserId OR user2.id = :currentUserId)')
