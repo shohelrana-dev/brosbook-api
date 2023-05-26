@@ -150,7 +150,7 @@ export default class UserService {
      * @throws {BadRequestException} When the user ID is empty.
      * @throws {NotFoundException} When the user is not found in the database.
      */
-    public async getUserById( userId: string, auth: Auth ): Promise<User> {
+    public async getById( userId: string, auth: Auth ): Promise<User> {
         if ( !userId ) throw new BadRequestException( "User id is empty" )
 
         const user = await this.userRepository.findOne( {
@@ -174,7 +174,7 @@ export default class UserService {
      * @throws {BadRequestException} When the username is empty.
      * @throws {NotFoundException} When the user is not found in the database.
      */
-    public async getUserByUsername( username: string, auth: Auth ): Promise<User> {
+    public async getByUsername( username: string, auth: Auth ): Promise<User> {
         if ( !username ) throw new BadRequestException( "Username is empty" )
 
         const user = await this.userRepository.findOne( {
@@ -262,7 +262,7 @@ export default class UserService {
      * @param {Auth} auth - The authenticated user object
      * @returns {Promise<ListResponse<User>>} The list of users matching the search query
      */
-    public async searchUsers( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>> {
+    public async search( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>> {
         const { q, page, limit } = params
         const skip               = limit * ( page - 1 )
 
@@ -271,9 +271,9 @@ export default class UserService {
             .leftJoinAndSelect( 'user.avatar', 'avatar' )
             .where( 'user.id != :userId', { userId: auth.user.id } )
             .andWhere( new Brackets( ( qb ) => {
-                qb.where( 'user.firstName LIKE :q', { q: `%${ q }%` } )
-                qb.orWhere( 'user.lastName LIKE :q', { q: `%${ q }%` } )
-                qb.orWhere( 'user.username LIKE :q', { q: `%${ q }%` } )
+                qb.where( 'user.firstName iLIKE :q', { q: `%${ q }%` } )
+                qb.orWhere( 'user.lastName iLIKE :q', { q: `%${ q }%` } )
+                qb.orWhere( 'user.username iLIKE :q', { q: `%${ q }%` } )
             } ) )
             .orderBy( 'user.createdAt', 'DESC' )
             .skip( skip )

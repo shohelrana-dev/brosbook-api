@@ -23,17 +23,17 @@ export default class UserController {
     }
 
     @httpGet( '/by/username/:username', )
-    public async getUserByUsername( req: Request ): Promise<User>{
-        return await this.usersService.getUserByUsername( req.params.username, req.auth )
+    public async getByUsername( req: Request ): Promise<User>{
+        return await this.usersService.getByUsername( req.params.username, req.auth )
     }
 
     @httpGet( '/search' )
-    public async searchUsers( req: Request ): Promise<ListResponse<User>>{
+    public async search( req: Request ): Promise<ListResponse<User>>{
         const q= req.query.q as string
         const page  = Number( req.query.page || 1 )
         const limit = Number( req.query.limit || 6 )
 
-        return await this.usersService.searchUsers( { q, page, limit }, req.auth )
+        return await this.usersService.search( { q, page, limit }, req.auth )
     }
 
     @httpGet( '/suggestions', authMiddleware )
@@ -45,8 +45,8 @@ export default class UserController {
     }
 
     @httpGet( '/:userId' )
-    public async getUserById( req: Request ): Promise<User>{
-        return await this.usersService.getUserById( req.params.userId, req.auth )
+    public async getById( req: Request ): Promise<User>{
+        return await this.usersService.getById( req.params.userId, req.auth )
     }
 
     @httpGet( '/:userId/followings' )
