@@ -2,8 +2,10 @@ import sendEmail from "@utils/sendEmail"
 import jwt from "jsonwebtoken"
 
 export class EmailService {
-    public static async sendEmailVerificationLink( email: string, username: string ){
-        const token   = jwt.sign( { email }, process.env.JWT_SECRET )
+    private static brandingColor = '#159615'
+
+    public static async sendEmailVerificationLink( email: string, username: string ) {
+        const token   = jwt.sign({ email }, process.env.JWT_SECRET)
         const appName = process.env.APP_NAME || 'Brosbook'
 
         const url     = `${ process.env.CLIENT_URL }/auth/email_verification/${ token }`
@@ -18,7 +20,7 @@ export class EmailService {
                         </div>
                         <div>
                             <a href="${ url }" 
-                                style="display: inline-block; background: rgb(58,141,245); color: #fff; padding: 10px 25px; border-radius: 5px; text-decoration: none;">
+                                style="display: inline-block; background: ${ EmailService.brandingColor }; color: #fff; padding: 10px 25px; border-radius: 5px; text-decoration: none;">
                                 Verify email address
                             </a>
                         </div>
@@ -27,11 +29,11 @@ export class EmailService {
                 </div>
             `
 
-        await sendEmail( email, subject, html )
+        await sendEmail(email, subject, html)
     }
 
-    public static async sendResetPasswordLink( email: string ){
-        const token   = jwt.sign( { email }, process.env.JWT_SECRET )
+    public static async sendResetPasswordLink( email: string ) {
+        const token   = jwt.sign({ email }, process.env.JWT_SECRET)
         const appName = process.env.APP_NAME || 'Brosbook'
 
         const url     = `${ process.env.CLIENT_URL }/auth/reset_password/${ token }`
@@ -48,7 +50,7 @@ export class EmailService {
                         </div>
                         <div style="text-align: center; margin-top: 28px;">
                             <a href="${ url }" 
-                                style="display: inline-block; background: rgb(58,141,245); color: #fff; padding: 10px 25px; border-radius: 5px; text-decoration: none;">
+                                style="display: inline-block; background: ${ EmailService.brandingColor }; color: #fff; padding: 10px 25px; border-radius: 5px; text-decoration: none;">
                                 <strong>Reset your password</strong>
                             </a>
                         </div>
@@ -57,6 +59,6 @@ export class EmailService {
                 </div>
             `
 
-        await sendEmail( email, subject, html )
+        await sendEmail(email, subject, html)
     }
 }
