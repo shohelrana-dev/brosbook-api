@@ -418,11 +418,7 @@ export default class UserService {
         if ( !coverPhoto ) throw new BadRequestException( "Cover photo is empty" )
 
         const user    = await this.userRepository.findOneBy( { id: auth.user.id } )
-        let profile = await this.profileRepository.findOneBy( { user: { id: auth.user.id } } )
-
-        if(!profile && user){
-           profile = await this.profileRepository.create({user}).save() 
-        }
+        const profile = await this.profileRepository.findOneBy( { user: { id: auth.user.id } } )
 
         if ( !user || !profile ) throw new BadRequestException( "User does not exists" )
 
