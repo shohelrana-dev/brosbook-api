@@ -63,6 +63,8 @@ export default class UserService {
         user.password  = userData.password
         await this.userRepository.save( user )
 
+        await this.profileRepository.create({ user }).save()
+
         return user
     }
 
@@ -111,6 +113,8 @@ export default class UserService {
             user.emailVerifiedAt = new Date( Date.now() ).toISOString()
             user.password        = uuid()
             await this.userRepository.save( user )
+
+            await this.profileRepository.create({ user }).save()
 
             //save photo
             user.avatar = await this.mediaService.save( {
@@ -414,7 +418,11 @@ export default class UserService {
         if ( !coverPhoto ) throw new BadRequestException( "Cover photo is empty" )
 
         const user    = await this.userRepository.findOneBy( { id: auth.user.id } )
-        const profile = await this.profileRepository.findOneBy( { user: { id: auth.user.id } } )
+        let profile = await this.profileRepository.findOneBy( { user: { id: auth.user.id } } )
+
+        if(!profile && user){
+           profile = await this.profileRepository.create({user}).save() 
+        }
 
         if ( !user || !profile ) throw new BadRequestException( "User does not exists" )
 
