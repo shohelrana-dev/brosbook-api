@@ -269,11 +269,11 @@ export default class UserService {
     public async search( params: SearchQueryParams, auth: Auth ): Promise<ListResponse<User>> {
         const { q, page, limit } = params
         const skip               = limit * ( page - 1 )
-
+        
         const [users, count] = await this.userRepository
             .createQueryBuilder( 'user' )
             .leftJoinAndSelect( 'user.avatar', 'avatar' )
-            .where( 'user.id != :userId', { userId: auth.user.id } )
+            .where( 'user.id != :userId', { userId: String(auth.user?.id) } )
             .andWhere( new Brackets( ( qb ) => {
                 qb.where( 'user.firstName iLIKE :q', { q: `%${ q }%` } )
                 qb.orWhere( 'user.lastName iLIKE :q', { q: `%${ q }%` } )
