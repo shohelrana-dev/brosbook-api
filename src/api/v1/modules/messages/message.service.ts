@@ -1,7 +1,6 @@
 import { Auth, ListQueryParams, ListResponse } from "@utils/types"
 import Conversation from "@entities/Conversation"
-import BadRequestException from "@exceptions/BadRequestException"
-import NotFoundException from "@exceptions/NotFoundException"
+import { BadRequestException, NotFoundException } from "node-http-exceptions"
 import { appDataSource } from "@config/datasource.config"
 import UserService from "@modules/users/user.service"
 import Message, { MessageType } from "@entities/Message"
