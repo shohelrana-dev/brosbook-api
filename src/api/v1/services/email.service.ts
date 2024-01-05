@@ -2,7 +2,7 @@ import sendEmail from "@utils/sendEmail"
 import jwt from "jsonwebtoken"
 
 export class EmailService {
-    private static brandingColor = '#159615'
+    private static brandingColor = '#14cb15'
 
     public static async sendEmailVerificationLink( email: string, username: string ) {
         const token   = jwt.sign({ email }, process.env.JWT_SECRET)
