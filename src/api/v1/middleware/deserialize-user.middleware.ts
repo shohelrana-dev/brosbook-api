@@ -1,34 +1,34 @@
 import User from '@entities/User'
+import { Auth } from '@utils/types'
 import { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
-import { Auth } from "@utils/types"
 
-export default async function deserializeUserMiddleware( req: Request, _: Response, next: NextFunction ){
-    let jwt_token            = ''
-    const { access_token }   = req.cookies
-    const { authorization }  = req.headers
-    req.auth                 = {} as Auth
+export default async function deserializeUserMiddleware(req: Request, _: Response, next: NextFunction) {
+    let jwt_token = ''
+    const { access_token } = req.cookies
+    const { authorization } = req.headers
+    req.auth = {} as Auth
     req.auth.isAuthenticated = false
-    req.auth.user            = {} as User
+    req.auth.user = {} as User
 
-    if( authorization ){
-        jwt_token = authorization.split( ' ' )[1]
-    } else if( access_token ){
+    if (authorization) {
+        jwt_token = authorization.split(' ')[1]
+    } else if (access_token) {
         jwt_token = access_token
-    } else{
+    } else {
         return next()
     }
 
     try {
-        const decoded = jwt.verify( jwt_token, process.env.JWT_SECRET! ) as any
+        const decoded = jwt.verify(jwt_token, process.env.JWT_SECRET!) as any
 
-        if( decoded ){
-            const user               = await User.findOneByOrFail( { id: decoded.id } )
+        if (decoded) {
+            const user = await User.findOneByOrFail({ id: decoded.id })
             req.auth.isAuthenticated = true
-            req.auth.user            = user
+            req.auth.user = user
         }
-    } catch ( err ) {
-        console.log( err.message )
+    } catch (err) {
+        console.log(err.message)
     }
     next()
 }

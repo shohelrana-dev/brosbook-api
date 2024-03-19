@@ -1,4 +1,4 @@
-import User from "@entities/User"
+import User from '@entities/User'
 
 export interface Auth {
     user?: User
@@ -9,16 +9,16 @@ export interface LoginTokenPayload {
     access_token: string
     expires_in: string | number
     token_type?: string
-    user: User,
+    user: User
     message?: string
 }
 
 export interface PaginateMeta {
-    count: number,
-    currentPage: number,
-    nextPage: number,
-    prevPage: number,
-    lastPage: number,
+    count: number
+    currentPage: number
+    nextPage: number
+    prevPage: number
+    lastPage: number
 }
 
 export interface ListResponse<T> extends PaginateMeta {

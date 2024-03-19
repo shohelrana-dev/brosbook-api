@@ -1,93 +1,92 @@
-import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator'
-import User                                                                       from "@entities/User"
-import argon2                                                                     from "argon2"
+import User from '@entities/User'
+import argon2 from 'argon2'
+import { ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator'
 
-@ValidatorConstraint( { async: true } )
+@ValidatorConstraint({ async: true })
 export class IsUsernameAlreadyExist implements ValidatorConstraintInterface {
-    async validate( username: string, args: ValidationArguments ){
+    async validate(username: string, args: ValidationArguments) {
         try {
-            await User.findOneByOrFail( { username } )
+            await User.findOneByOrFail({ username })
             return false
-        } catch ( e ) {
+        } catch (e) {
             return true
         }
     }
 
-    defaultMessage( validationArguments?: ValidationArguments ): string{
+    defaultMessage(validationArguments?: ValidationArguments): string {
         return 'username already taken'
     }
 }
 
-@ValidatorConstraint( { async: true } )
+@ValidatorConstraint({ async: true })
 export class IsEmailAlreadyExist implements ValidatorConstraintInterface {
-    async validate( email: string, args: ValidationArguments ){
+    async validate(email: string, args: ValidationArguments) {
         try {
-            await User.findOneByOrFail( { email } )
+            await User.findOneByOrFail({ email })
             return false
-        } catch ( e ) {
+        } catch (e) {
             return true
         }
     }
 
-    defaultMessage( validationArguments?: ValidationArguments ): string{
+    defaultMessage(validationArguments?: ValidationArguments): string {
         return 'already have an account with the email address'
     }
 }
 
-@ValidatorConstraint( { async: true } )
+@ValidatorConstraint({ async: true })
 export class IsUsernameOrEmailNotExist implements ValidatorConstraintInterface {
-    async validate( username: string, args: ValidationArguments ){
+    async validate(username: string, args: ValidationArguments) {
         try {
-            await User.findOneOrFail( {
-                where: [{ username }, { email: username }]
-            } )
+            await User.findOneOrFail({
+                where: [{ username }, { email: username }],
+            })
             return true
-        } catch ( e ) {
+        } catch (e) {
             return false
         }
     }
 
-    defaultMessage( validationArguments?: ValidationArguments ): string{
+    defaultMessage(validationArguments?: ValidationArguments): string {
         return 'account does not exist with this username or email'
     }
 }
 
-@ValidatorConstraint( { async: true } )
+@ValidatorConstraint({ async: true })
 export class MatchValue implements ValidatorConstraintInterface {
-    async validate( value: string, args: ValidationArguments ){
-        const [propertyName] = args.constraints;
-        if( value === ( args.object as any )[propertyName] ){
+    async validate(value: string, args: ValidationArguments) {
+        const [propertyName] = args.constraints
+        if (value === (args.object as any)[propertyName]) {
             return true
         }
         return false
     }
 
-    defaultMessage( args?: ValidationArguments ): string{
-        return `should be same as ${ args.constraints[0] }`
+    defaultMessage(args?: ValidationArguments): string {
+        return `should be same as ${args.constraints[0]}`
     }
 }
 
-
-@ValidatorConstraint( { async: true } )
+@ValidatorConstraint({ async: true })
 export class IsPasswordValid implements ValidatorConstraintInterface {
-    async validate( password: string, args: ValidationArguments ){
+    async validate(password: string, args: ValidationArguments) {
         const { username } = args.object as any
         try {
-            const user              = await User.findOneOrFail( {
+            const user = await User.findOneOrFail({
                 where: [{ username }, { email: username }],
-                select: ["id", "password"]
-            } )
-            const isPasswordMatched = await argon2.verify( user.password, password )
-            if( isPasswordMatched ){
+                select: ['id', 'password'],
+            })
+            const isPasswordMatched = await argon2.verify(user.password, password)
+            if (isPasswordMatched) {
                 return true
             }
             return false
-        } catch ( e ) {
+        } catch (e) {
             return false
         }
     }
 
-    defaultMessage( validationArguments?: ValidationArguments ): string{
+    defaultMessage(validationArguments?: ValidationArguments): string {
         return 'invalid password'
     }
 }
