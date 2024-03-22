@@ -1,4 +1,5 @@
-import rateLimit from 'express-rate-limit'
+import { NextFunction, Request } from 'express'
+import rateLimit, { Options } from 'express-rate-limit'
 import { httpStatus } from 'node-http-exceptions'
 
 const loginLimiterMiddleware = rateLimit({
@@ -8,7 +9,7 @@ const loginLimiterMiddleware = rateLimit({
         message: 'Too many login attempts from this IP, please try again after a 60 second pause',
         statusCode: httpStatus.TOO_MANY_REQUESTS,
     },
-    handler: (req, res, next, options) => {
+    handler: (req: Request, res: any, next: NextFunction, options: Options) => {
         console.log(
             `Too Many Requests: ${options.message.message}\t${req.method}\t${req.url}\t${req.headers.origin}`,
             'errLog.log'

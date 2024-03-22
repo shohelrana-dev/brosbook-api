@@ -45,6 +45,12 @@
             "@utils/*": ["api/v1/utils/*"]
         }
     },
-    "include": ["custom.d.ts", "src/**/*.ts", "src/**/*.json", ".env"],
+    "include": [
+        "custom.d.ts",
+        "src/**/*.ts",
+        "src/**/*.json",
+        ".env",
+        "src/api/v1/utils/convertToMilliseconds.js"
+    ],
     "exclude": ["node_modules", "dist"]
 }

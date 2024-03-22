@@ -31,6 +31,7 @@
         "dotenv": "^16.0.3",
         "express": "^4.17.1",
         "express-fileupload": "^1.2.1",
+        "express-rate-limit": "^7.2.0",
         "google-auth-library": "^8.5.2",
         "inversify": "^6.0.1",
         "inversify-express-utils": "^6.4.3",
