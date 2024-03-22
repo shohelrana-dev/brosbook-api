@@ -8,7 +8,12 @@ import PostService from '@modules/posts/post.service'
 import { paginateMeta } from '@utils/paginateMeta'
 import { Auth, ListQueryParams, ListResponse } from '@utils/types'
 import { inject, injectable } from 'inversify'
-import { BadRequestException, ForbiddenException, NotFoundException } from 'node-http-exceptions'
+import {
+    BadRequestException,
+    ForbiddenException,
+    InternalServerException,
+    NotFoundException,
+} from 'node-http-exceptions'
 
 @injectable()
 export default class CommentService {
@@ -33,16 +38,18 @@ export default class CommentService {
         const limit = params.limit
         const skip = limit * (page - 1)
 
-        const [comments, count] = await this.commentRepository.findAndCount({
-            where: { post: { id: postId } },
-            order: { createdAt: 'DESC' },
-            take: limit,
-            skip,
-        })
-
-        await this.formatComments(comments, auth)
-
-        return { items: comments, ...paginateMeta(count, page, limit) }
+        try {
+            const [comments, count] = await this.commentRepository.findAndCount({
+                where: { post: { id: postId } },
+                order: { createdAt: 'DESC' },
+                take: limit,
+                skip,
+            })
+            await this.formatComments(comments, auth)
+            return { items: comments, ...paginateMeta(count, page, limit) }
+        } catch {
+            throw new InternalServerException('Failed to fetch comments')
+        }
     }
 
     public async create(
@@ -58,25 +65,29 @@ export default class CommentService {
         const author = await User.findOneBy({ id: auth.user.id })
         if (!author) throw new BadRequestException('Author does not exists.')
 
-        const comment = new Comment()
-        comment.author = author
-        comment.body = body
-        comment.post = post
-        await this.commentRepository.save(comment)
+        try {
+            const comment = new Comment()
+            comment.author = author
+            comment.body = body
+            comment.post = post
+            await this.commentRepository.save(comment)
 
-        this.updatePostCommentsCount(post.id)
+            this.updatePostCommentsCount(post.id)
 
-        this.notificationService.create(
-            {
-                recipient: post.author,
-                type: NotificationTypes.COMMENTED_POST,
-                post,
-                comment,
-            },
-            auth
-        )
+            this.notificationService.create(
+                {
+                    recipient: post.author,
+                    type: NotificationTypes.COMMENTED_POST,
+                    post,
+                    comment,
+                },
+                auth
+            )
 
-        return comment
+            return comment
+        } catch {
+            throw new InternalServerException('Failed to save comment.')
+        }
     }
 
     public async delete(commentId: string, auth: Auth): Promise<Comment> {
@@ -93,11 +104,13 @@ export default class CommentService {
             throw new ForbiddenException('You are not owner of the comment.')
         }
 
-        await this.commentRepository.delete({ id: comment.id })
-
-        this.updatePostCommentsCount(comment.post.id)
-
-        return comment
+        try {
+            await this.commentRepository.delete({ id: comment.id })
+            this.updatePostCommentsCount(comment.post.id)
+            return comment
+        } catch {
+            throw new InternalServerException('Failed to delete comment.')
+        }
     }
 
     public async like(commentId: string, auth: Auth): Promise<Comment> {
@@ -117,27 +130,31 @@ export default class CommentService {
 
         if (liked) throw new BadRequestException('The user already liked the comment.')
 
-        const like = new CommentLike()
-        like.comment = comment
-        like.user = auth.user as User
-        await this.likeRepository.save(like)
+        try {
+            const like = new CommentLike()
+            like.comment = comment
+            like.user = auth.user as User
+            await this.likeRepository.save(like)
 
-        this.updateCommentLikesCount(comment.id)
+            this.updateCommentLikesCount(comment.id)
 
-        comment.isViewerLiked = true
-        comment.likesCount = Number(comment.likesCount) + 1
+            comment.isViewerLiked = true
+            comment.likesCount = Number(comment.likesCount) + 1
 
-        this.notificationService.create(
-            {
-                recipient: comment.author,
-                type: NotificationTypes.LIKED_COMMENT,
-                post: comment.post,
-                comment,
-            },
-            auth
-        )
+            this.notificationService.create(
+                {
+                    recipient: comment.author,
+                    type: NotificationTypes.LIKED_COMMENT,
+                    post: comment.post,
+                    comment,
+                },
+                auth
+            )
 
-        return comment
+            return comment
+        } catch {
+            throw new InternalServerException('Failed to like comment.')
+        }
     }
 
     public async unlike(commentId: string, auth: Auth): Promise<Comment> {
@@ -154,19 +171,23 @@ export default class CommentService {
 
         if (!like) throw new BadRequestException('The user did not like the comment.')
 
-        await this.likeRepository.remove(like)
+        try {
+            await this.likeRepository.remove(like)
 
-        this.updateCommentLikesCount(comment.id)
+            this.updateCommentLikesCount(comment.id)
 
-        comment.isViewerLiked = false
-        comment.likesCount = Number(comment.likesCount) - 1
+            comment.isViewerLiked = false
+            comment.likesCount = Number(comment.likesCount) - 1
 
-        this.notificationService.delete(
-            { recipient: comment.author, comment, type: NotificationTypes.LIKED_COMMENT },
-            auth
-        )
+            this.notificationService.delete(
+                { recipient: comment.author, comment, type: NotificationTypes.LIKED_COMMENT },
+                auth
+            )
 
-        return comment
+            return comment
+        } catch {
+            throw new InternalServerException('Failed to unlike comment.')
+        }
     }
 
     private updateCommentLikesCount(commentId: string) {

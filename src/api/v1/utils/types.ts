@@ -1,16 +1,13 @@
-import User from '@entities/User'
-
 export interface Auth {
-    user?: User
+    user?: { id: string; email: string; username: string }
     isAuthenticated: boolean
+    isTokenExpired: boolean
 }
 
-export interface LoginTokenPayload {
-    access_token: string
-    expires_in: string | number
-    token_type?: string
-    user: User
-    message?: string
+export interface AuthToken {
+    accessToken: string
+    expiresIn: string | number
+    tokenType: string
 }
 
 export interface PaginateMeta {

@@ -1,7 +1,9 @@
 import User from '@entities/User'
 import dtoValidationMiddleware from '@middleware/dto-validation.middleware'
+import loginLimiterMiddleware from '@middleware/login-limiter.middleware'
 import { CreateUserDTO, ForgotPasswordDTO, LoginUserDTO, ResetPasswordDTO } from '@modules/auth/auth.dto'
-import { LoginTokenPayload } from '@utils/types'
+import convertToMilliseconds from '@utils/convertToMilliseconds'
+import { AuthToken } from '@utils/types'
 import { Request, Response } from 'express'
 import { inject } from 'inversify'
 import { controller, httpGet, httpPost } from 'inversify-express-utils'
@@ -26,14 +28,51 @@ export default class AuthController {
         return res.status(201).json(user)
     }
 
-    @httpPost('/login', dtoValidationMiddleware(LoginUserDTO))
-    public async login(req: Request): Promise<LoginTokenPayload> {
-        return await this.authService.login(req.body)
+    @httpPost('/login', loginLimiterMiddleware, dtoValidationMiddleware(LoginUserDTO))
+    public async login(req: Request, res: Response): Promise<Response> {
+        const { refreshToken, ...rest } = await this.authService.login(req.body)
+
+        // Creates Secure Cookie with refresh token
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: convertToMilliseconds(process.env['REFRESH_TOKEN_EXPIRES_IN']),
+        })
+
+        return res.json(rest)
     }
 
     @httpPost('/google')
-    public async loginWithGoogle(req: Request): Promise<LoginTokenPayload> {
-        return await this.authService.loginWithGoogle(req.body.token)
+    public async loginWithGoogle(req: Request, res: Response): Promise<Response> {
+        const { refreshToken, ...rest } = await this.authService.loginWithGoogle(req.body.token)
+
+        // Creates Secure Cookie with refresh token
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: convertToMilliseconds(process.env['REFRESH_TOKEN_EXPIRES_IN']),
+        })
+
+        return res.json(rest)
+    }
+
+    @httpGet('/logout')
+    public async logout(_: Request, res: Response): Promise<Response> {
+        // clear refresh token cookie
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+        })
+
+        return res.json({ message: 'Logged out.' })
+    }
+
+    @httpGet('/refresh_token')
+    public async refreshToken(req: Request): Promise<AuthToken> {
+        return await this.authService.refreshToken(req.cookies.refreshToken)
     }
 
     @httpPost('/forgot_password', dtoValidationMiddleware(ForgotPasswordDTO))

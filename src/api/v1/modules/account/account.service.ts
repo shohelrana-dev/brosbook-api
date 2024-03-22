@@ -2,23 +2,21 @@ import { appDataSource } from '@config/datasource.config'
 import Profile from '@entities/Profile'
 import User from '@entities/User'
 import { ChangePasswordDTO, ChangeUsernameDTO, UpdateProfileDTO } from '@modules/account/account.dto'
-import UserService from '@modules/users/user.service'
 import { selectAllColumns } from '@utils/selectAllColumns'
 import { Auth } from '@utils/types'
 import argon2 from 'argon2'
-import { inject, injectable } from 'inversify'
+import { injectable } from 'inversify'
 import isEmpty from 'is-empty'
-import { BadRequestException, UnprocessableEntityException } from 'node-http-exceptions'
+import {
+    BadRequestException,
+    InternalServerException,
+    UnprocessableEntityException,
+} from 'node-http-exceptions'
 
 @injectable()
 export default class AccountService {
     private readonly userRepository = appDataSource.getRepository(User)
     private readonly profileRepository = appDataSource.getRepository(Profile)
-
-    constructor(
-        @inject(UserService)
-        private readonly userService: UserService
-    ) {}
 
     public async updateProfile(userData: UpdateProfileDTO, auth: Auth): Promise<User> {
         if (isEmpty(userData)) throw new BadRequestException('User data is empty')
@@ -35,19 +33,23 @@ export default class AccountService {
             profile = new Profile()
         }
 
-        profile.bio = bio
-        profile.phone = phone
-        profile.location = location
-        profile.birthdate = birthdate
-        profile.gender = gender
-        await this.profileRepository.save(profile)
+        try {
+            profile.bio = bio
+            profile.phone = phone
+            profile.location = location
+            profile.birthdate = birthdate
+            profile.gender = gender
+            await this.profileRepository.save(profile)
 
-        user.firstName = firstName
-        user.lastName = lastName
-        user.profile = profile
-        await this.userRepository.save(user)
+            user.firstName = firstName
+            user.lastName = lastName
+            user.profile = profile
+            await this.userRepository.save(user)
 
-        return user
+            return user
+        } catch {
+            throw new InternalServerException('Failed to update profile.')
+        }
     }
 
     public async changeUsername(changeUsernameData: ChangeUsernameDTO, auth: Auth) {
@@ -67,11 +69,14 @@ export default class AccountService {
         if (!isPasswordMatching) throw new UnprocessableEntityException('Invalid Password.')
 
         user.username = username
-        await this.userRepository.save(user)
 
-        delete user.password
-
-        return user
+        try {
+            await this.userRepository.save(user)
+            delete user.password
+            return user
+        } catch {
+            throw new InternalServerException('Failed to change username.')
+        }
     }
 
     public async changePassword(changePasswordData: ChangePasswordDTO, auth: Auth) {
@@ -90,7 +95,11 @@ export default class AccountService {
 
         if (!isPasswordMatching) throw new UnprocessableEntityException('Current password invalid.')
 
-        user.password = await argon2.hash(newPassword)
-        await this.userRepository.save(user)
+        try {
+            user.password = await argon2.hash(newPassword)
+            await this.userRepository.save(user)
+        } catch {
+            throw new InternalServerException('Failed to change password.')
+        }
     }
 }

@@ -61,7 +61,7 @@ export default class NotificationService {
         if (!data) throw new BadRequestException('Create notification payload is empty.')
 
         const { recipient, type, post, comment } = data
-        const initiator = auth.user
+        const initiator = auth.user as User
 
         const isSameUserAndNotNeedNotification = recipient.id === initiator.id
         if (isSameUserAndNotNeedNotification) return

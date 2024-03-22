@@ -1,11 +1,12 @@
 //dependencies
 import { NextFunction, Request, Response } from 'express'
-import { UnauthorizedException } from "node-http-exceptions"
+import { ForbiddenException, UnauthorizedException } from 'node-http-exceptions'
 
-const authMiddleware = ( req: Request, _: Response, next: NextFunction ) => {
-    if( req.auth.isAuthenticated ){
+export default function authMiddleware(req: Request, _: Response, next: NextFunction) {
+    if (req.auth.isAuthenticated) {
         return next()
+    } else if (req.auth.isTokenExpired) {
+        throw new ForbiddenException('Session has been expired.')
     }
-    next( new UnauthorizedException( 'You are not currently logged in.' ) )
+    throw new UnauthorizedException('You are not currently logged in.')
 }
-export default authMiddleware

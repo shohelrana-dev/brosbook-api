@@ -1,34 +1,33 @@
-import User from '@entities/User'
+import extractAuthToken from '@utils/extractAuthToken'
 import { Auth } from '@utils/types'
 import { NextFunction, Request, Response } from 'express'
-import jwt from 'jsonwebtoken'
+import jwt, { JwtPayload, TokenExpiredError } from 'jsonwebtoken'
 
 export default async function deserializeUserMiddleware(req: Request, _: Response, next: NextFunction) {
-    let jwt_token = ''
-    const { access_token } = req.cookies
-    const { authorization } = req.headers
-    req.auth = {} as Auth
-    req.auth.isAuthenticated = false
-    req.auth.user = {} as User
+    const token = extractAuthToken(req)
 
-    if (authorization) {
-        jwt_token = authorization.split(' ')[1]
-    } else if (access_token) {
-        jwt_token = access_token
-    } else {
-        return next()
-    }
+    //set initial empty auth object in req object
+    req.auth = {} as Auth
+
+    if (!token) return next()
 
     try {
-        const decoded = jwt.verify(jwt_token, process.env.JWT_SECRET!) as any
+        const decoded = jwt.verify(token, process.env['ACCESS_TOKEN_SECRET']) as JwtPayload
 
         if (decoded) {
-            const user = await User.findOneByOrFail({ id: decoded.id })
             req.auth.isAuthenticated = true
-            req.auth.user = user
+            req.auth.user = {
+                id: decoded.id,
+                email: decoded.email,
+                username: decoded.username,
+            }
         }
     } catch (err) {
-        console.log(err.message)
+        if (err instanceof TokenExpiredError) {
+            req.auth.isTokenExpired = true
+        }
+        console.log('JWT error: ', err.message)
     }
-    next()
+
+    return next()
 }

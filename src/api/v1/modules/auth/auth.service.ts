@@ -1,6 +1,12 @@
 import argon2 from 'argon2'
 import isEmpty from 'is-empty'
-import jwt from 'jsonwebtoken'
+import jwt, { JsonWebTokenError, JwtPayload, TokenExpiredError } from 'jsonwebtoken'
+import {
+    BadRequestException,
+    ForbiddenException,
+    InternalServerException,
+    NotFoundException,
+} from 'node-http-exceptions'
 
 import { appDataSource } from '@config/datasource.config'
 import User from '@entities/User'
@@ -8,9 +14,9 @@ import { CreateUserDTO, LoginUserDTO, ResetPasswordDTO } from '@modules/auth/aut
 import UserService from '@modules/users/user.service'
 import { EmailService } from '@services/email.service'
 import { selectAllColumns } from '@utils/selectAllColumns'
-import { LoginTokenPayload } from '@utils/types'
+import { AuthToken } from '@utils/types'
+import verifyGoogleOAuthToken from '@utils/verifyGoogleOAuthToken'
 import { inject, injectable } from 'inversify'
-import { BadRequestException } from 'node-http-exceptions'
 
 /**
  * Service for handling user authentication and authorization.
@@ -34,11 +40,13 @@ export default class AuthService {
     public async signup(userData: CreateUserDTO): Promise<User> {
         if (isEmpty(userData)) throw new BadRequestException('Signup user data is empty.')
 
-        const user = await this.userService.create(userData)
-
-        await EmailService.sendEmailVerificationLink(userData.email, user.username)
-
-        return user
+        try {
+            const user = await this.userService.create(userData)
+            await EmailService.sendEmailVerificationLink(userData.email, user.username)
+            return user
+        } catch {
+            throw new InternalServerException('Failed to create user.')
+        }
     }
 
     /**
@@ -48,7 +56,9 @@ export default class AuthService {
      * @returns The login token and user data.
      * @throws BadRequestException if the user data is empty or invalid.
      */
-    public async login(userData: LoginUserDTO): Promise<LoginTokenPayload> {
+    public async login(
+        userData: LoginUserDTO
+    ): Promise<AuthToken & { user: User; refreshToken: string }> {
         if (isEmpty(userData)) throw new BadRequestException('Login user data is empty.')
 
         const { username, password } = userData
@@ -67,10 +77,16 @@ export default class AuthService {
         delete user.password
 
         if (!user.hasEmailVerified) {
-            return { access_token: null, expires_in: null, user, message: 'Email was not verified. ' }
+            throw new ForbiddenException(
+                'Your email has not been verified yet. Please check your mailbox.',
+                { user }
+            )
         }
 
-        return AuthService.createJwtLoginToken(user)
+        const accessTokenData = AuthService.createAccessToken(user)
+        const refreshToken = AuthService.createRefreshToken(user)
+
+        return { user, ...accessTokenData, refreshToken }
     }
 
     /**
@@ -79,10 +95,64 @@ export default class AuthService {
      * @param token - The Google OAuth token.
      * @returns The login token and user data.
      */
-    public async loginWithGoogle(token: string): Promise<LoginTokenPayload> {
-        const user = await this.userService.createWithGoogle(token)
+    public async loginWithGoogle(
+        token: string
+    ): Promise<AuthToken & { user: User; refreshToken: string }> {
+        const tokenPayload = await verifyGoogleOAuthToken(token)
 
-        return AuthService.createJwtLoginToken(user)
+        let user = await this.userRepository.findOneBy({ email: tokenPayload.email })
+
+        //make user email verified if not verified
+        if (user && !user.hasEmailVerified) {
+            user.emailVerifiedAt = new Date(Date.now())
+            await this.userRepository.save(user)
+        }
+
+        if (!user) {
+            //create new user
+            user = await this.userService.createWithGoogleOAuthTokenPayload(tokenPayload)
+        }
+
+        const accessTokenData = AuthService.createAccessToken(user)
+        const refreshToken = AuthService.createRefreshToken(user)
+
+        return { user, ...accessTokenData, refreshToken }
+    }
+
+    /**
+     * Refresh token with the provided refreshTOken.
+     *
+     * @param refreshToken
+     * @returns AuthToken.
+     * @throws Error if refreshToken is empty or invalid.
+     */
+    public async refreshToken(refreshToken: string): Promise<AuthToken> {
+        if (!refreshToken) throw new ForbiddenException('Refresh token is empty.')
+
+        try {
+            const tokenPayload = jwt.verify(
+                refreshToken,
+                process.env['REFRESH_TOKEN_SECRET']
+            ) as JwtPayload
+
+            if (tokenPayload.type !== 'refresh') {
+                throw new BadRequestException('Invalid refreshToken.')
+            }
+
+            try {
+                const user = await this.userRepository.findOneByOrFail({ id: tokenPayload.id })
+                return AuthService.createAccessToken(user)
+            } catch {
+                throw new NotFoundException('User not found with the token payload.')
+            }
+        } catch (err) {
+            if (err instanceof TokenExpiredError) {
+                throw new ForbiddenException('Token has been expired.')
+            } else if (err instanceof JsonWebTokenError) {
+                throw new ForbiddenException('Invalid token.')
+            }
+            throw err
+        }
     }
 
     /**
@@ -92,11 +162,15 @@ export default class AuthService {
      * @throws BadRequestException if the user does not exist.
      */
     public async forgotPassword(email: string): Promise<void> {
-        const user = await User.findOneBy({ email })
+        const user = await this.userRepository.findOneBy({ email })
 
         if (!user) throw new BadRequestException('User not found with the email.')
 
-        await EmailService.sendResetPasswordLink(email)
+        try {
+            await EmailService.sendResetPasswordLink(email)
+        } catch {
+            throw new InternalServerException('Failed to send password reset email.')
+        }
     }
 
     /**
@@ -121,11 +195,15 @@ export default class AuthService {
 
         if (!user) throw new BadRequestException('User does not exists.')
 
-        user.password = await argon2.hash(password)
-        user = await this.userRepository.save(user)
-        delete user.password
+        try {
+            user.password = await argon2.hash(password)
+            user = await this.userRepository.save(user)
+            delete user.password
 
-        return user
+            return user
+        } catch {
+            throw new InternalServerException('Failed to reset password.')
+        }
     }
 
     /**
@@ -153,11 +231,15 @@ export default class AuthService {
             throw new BadRequestException('The email address already verified')
         }
 
-        user.emailVerifiedAt = new Date(Date.now())
-        user = await this.userRepository.save(user)
-        delete user.password
+        try {
+            user.emailVerifiedAt = new Date(Date.now())
+            user = await this.userRepository.save(user)
+            delete user.password
 
-        return user
+            return user
+        } catch {
+            throw new InternalServerException('Failed to verify email address.')
+        }
     }
 
     /**
@@ -171,25 +253,61 @@ export default class AuthService {
 
         if (!user) throw new BadRequestException('User does not exists.')
 
-        await EmailService.sendEmailVerificationLink(user.email, user.username)
+        try {
+            await EmailService.sendEmailVerificationLink(user.email, user.username)
+        } catch {
+            throw new InternalServerException('Failed to resend email verification link.')
+        }
     }
 
     /**
-     * Creates a JSON Web Token (JWT) login token for a given user
+     * Creates a access token using JSON Web Token (JWT) for a given user
      *
      * @param user - The user object for which the token is being created
-     * @returns The JWT login token payload
+     * @returns AuthToken
      */
-    private static createJwtLoginToken(user: User): LoginTokenPayload {
-        const dataStoredInToken = {
+    private static createAccessToken(user: User): AuthToken {
+        const tokenPayload = {
             id: user.id,
             username: user.username,
             email: user.email,
+            type: 'access',
         }
-        const secretKey = process.env.JWT_SECRET!
-        const expires_in = process.env.JWT_EXPIRY || '1d'
+        const accessTokenSecret = process.env['ACCESS_TOKEN_SECRET']
+        const expiresIn = process.env['ACCESS_TOKEN_EXPIRES_IN'] || '30m'
+        const tokenType = 'Bearer'
 
-        let access_token = jwt.sign(dataStoredInToken, secretKey, { expiresIn: expires_in })
-        return { access_token, expires_in, token_type: 'Bearer', user }
+        const accessToken = jwt.sign(tokenPayload, accessTokenSecret, {
+            expiresIn,
+        })
+
+        return {
+            accessToken,
+            tokenType,
+            expiresIn,
+        }
+    }
+
+    /**
+     * Creates a refresh token using JSON Web Token (JWT) for a given user
+     *
+     * @param user - The user object for which the token is being created
+     * @returns string
+     */
+    private static createRefreshToken(user: User): string {
+        const tokenPayload = {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            type: 'refresh',
+        }
+        const refreshTokenSecret = process.env['REFRESH_TOKEN_SECRET']
+        const expiresIn = process.env['REFRESH_TOKEN_EXPIRES_IN'] || '7d'
+
+        const refreshToken = jwt.sign(tokenPayload, refreshTokenSecret, {
+            expiresIn,
+        })
+
+        return refreshToken
     }
 }

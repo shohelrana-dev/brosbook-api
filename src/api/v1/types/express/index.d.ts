@@ -1,8 +1,13 @@
 declare namespace Express {
     export interface Request {
         auth: {
-            user?: any
+            user?: {
+                id: string
+                email: string
+                username: string
+            }
             isAuthenticated: boolean
+            isTokenExpired: boolean
         }
     }
 }

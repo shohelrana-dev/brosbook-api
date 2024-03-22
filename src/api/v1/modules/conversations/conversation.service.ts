@@ -3,25 +3,16 @@ import Conversation from '@entities/Conversation'
 import Media from '@entities/Media'
 import Message from '@entities/Message'
 import User from '@entities/User'
-import UserService from '@modules/users/user.service'
-import MediaService from '@services/media.service'
 import { paginateMeta } from '@utils/paginateMeta'
 import { Auth, ListQueryParams, ListResponse } from '@utils/types'
-import { inject, injectable } from 'inversify'
-import { BadRequestException, NotFoundException } from 'node-http-exceptions'
+import { injectable } from 'inversify'
+import { BadRequestException, InternalServerException, NotFoundException } from 'node-http-exceptions'
 
 @injectable()
 export default class ConversationService {
     private readonly userRepository = appDataSource.getRepository(User)
     private readonly conversationRepository = appDataSource.getRepository(Conversation)
     private readonly messageRepository = appDataSource.getRepository(Message)
-
-    constructor(
-        @inject(UserService)
-        private readonly userService: UserService,
-        @inject(MediaService)
-        private readonly mediaService: MediaService
-    ) {}
 
     public async createConversation(participantId: string, auth: Auth): Promise<Conversation> {
         if (!participantId) throw new BadRequestException('Participant id is empty.')
@@ -38,12 +29,14 @@ export default class ConversationService {
 
         if (findConversation) throw new NotFoundException('Conversation already exists.')
 
-        const conversation = new Conversation()
-        conversation.user1 = user
-        conversation.user2 = participant
-        await this.conversationRepository.save(conversation)
-
-        return conversation
+        try {
+            const conversation = new Conversation()
+            conversation.user1 = user
+            conversation.user2 = participant
+            return await this.conversationRepository.save(conversation)
+        } catch {
+            throw new InternalServerException('Failed to save conversation.')
+        }
     }
 
     public async getConversationById(conversationId: string, auth: Auth): Promise<Conversation> {
@@ -75,7 +68,7 @@ export default class ConversationService {
         if (!participantId) throw new BadRequestException('Participant id is empty.')
 
         const participant = await this.userRepository.findOneBy({ id: participantId })
-        if (!participant) throw new NotFoundException('Participant  does not exists.')
+        if (!participant) throw new NotFoundException('Participant does not exists.')
 
         const conversation = await this.conversationRepository.findOne({
             where: [
@@ -95,57 +88,68 @@ export default class ConversationService {
         auth: Auth
     ): Promise<ListResponse<Conversation>> {
         const skip = limit * (page - 1)
-        //.addSelect('COUNT(CASE WHEN message.seenAt IS NULL AND messageSender.id != :userId THEN 1 END)', 'unreadCount')
 
-        const [conversations, count] = await this.conversationRepository
-            .createQueryBuilder('conversation')
-            .setParameter('currentUserId', auth.user.id)
-            .leftJoinAndSelect('conversation.user1', 'user1')
-            .leftJoinAndSelect('conversation.user2', 'user2')
-            .leftJoinAndSelect('user1.avatar', 'avatar1')
-            .leftJoinAndSelect('user2.avatar', 'avatar2')
-            .leftJoinAndSelect('conversation.lastMessage', 'lastMessage')
-            .leftJoinAndSelect('lastMessage.image', 'lastMessageImage')
-            .leftJoinAndSelect('lastMessage.sender', 'lastMessageSender')
-            .where('(user1.id = :currentUserId OR user2.id = :currentUserId)')
-            .orderBy('conversation.updatedAt', 'DESC')
-            .take(limit)
-            .skip(skip)
-            .getManyAndCount()
+        try {
+            const [conversations, count] = await this.conversationRepository
+                .createQueryBuilder('conversation')
+                .setParameter('currentUserId', auth.user.id)
+                .leftJoinAndSelect('conversation.user1', 'user1')
+                .leftJoinAndSelect('conversation.user2', 'user2')
+                .leftJoinAndSelect('user1.avatar', 'avatar1')
+                .leftJoinAndSelect('user2.avatar', 'avatar2')
+                .leftJoinAndSelect('conversation.lastMessage', 'lastMessage')
+                .leftJoinAndSelect('lastMessage.image', 'lastMessageImage')
+                .leftJoinAndSelect('lastMessage.sender', 'lastMessageSender')
+                .where('(user1.id = :currentUserId OR user2.id = :currentUserId)')
+                .orderBy('conversation.updatedAt', 'DESC')
+                .take(limit)
+                .skip(skip)
+                .getManyAndCount()
 
-        await this.formatConversations(conversations, auth)
+            await this.formatConversations(conversations, auth)
 
-        return { items: conversations, ...paginateMeta(count, page, limit) }
+            return { items: conversations, ...paginateMeta(count, page, limit) }
+        } catch {
+            throw new InternalServerException('Failed to fetch conversations.')
+        }
     }
 
     public async getUnreadConversationsCount(userId: string): Promise<number> {
-        return await this.conversationRepository
-            .createQueryBuilder('conversation')
-            .setParameter('userId', userId)
-            .innerJoin('conversation.user1', 'user1')
-            .innerJoin('conversation.user2', 'user2')
-            .innerJoin('conversation.lastMessage', 'lastMessage')
-            .innerJoin('lastMessage.sender', 'lastMessageSender')
-            .where('lastMessage.seenAt IS NULL')
-            .andWhere('lastMessageSender.id != :userId')
-            .andWhere('(user1.id = :userId OR user2.id = :userId)')
-            .groupBy('conversation.id')
-            .getCount()
+        try {
+            return await this.conversationRepository
+                .createQueryBuilder('conversation')
+                .setParameter('userId', userId)
+                .innerJoin('conversation.user1', 'user1')
+                .innerJoin('conversation.user2', 'user2')
+                .innerJoin('conversation.lastMessage', 'lastMessage')
+                .innerJoin('lastMessage.sender', 'lastMessageSender')
+                .where('lastMessage.seenAt IS NULL')
+                .andWhere('lastMessageSender.id != :userId')
+                .andWhere('(user1.id = :userId OR user2.id = :userId)')
+                .groupBy('conversation.id')
+                .getCount()
+        } catch {
+            throw new InternalServerException('Failed to fetch unread conversations count.')
+        }
     }
 
     public async getConversationUnreadMessagesCount(
         conversationId: string,
         auth: Auth
     ): Promise<number> {
-        return await this.messageRepository
-            .createQueryBuilder('message')
-            .innerJoin('message.conversation', 'conversation')
-            .innerJoin('message.sender', 'sender')
-            .where('conversation.id = :conversationId', { conversationId })
-            .andWhere('sender.id != :senderId', { senderId: auth.user.id })
-            .andWhere('message.seenAt IS NULL')
-            .groupBy('message.id')
-            .getCount()
+        try {
+            return await this.messageRepository
+                .createQueryBuilder('message')
+                .innerJoin('message.conversation', 'conversation')
+                .innerJoin('message.sender', 'sender')
+                .where('conversation.id = :conversationId', { conversationId })
+                .andWhere('sender.id != :senderId', { senderId: auth.user.id })
+                .andWhere('message.seenAt IS NULL')
+                .groupBy('message.id')
+                .getCount()
+        } catch {
+            throw new InternalServerException('Failed to fetch unread messages count.')
+        }
     }
 
     public async getConversationMedia(
@@ -164,19 +168,23 @@ export default class ConversationService {
         })
         if (!conversation) throw new NotFoundException('Conversation does not exists.')
 
-        const [messages, count] = await this.messageRepository
-            .createQueryBuilder('message')
-            .leftJoinAndSelect('message.image', 'image')
-            .where('message.conversationId = :conversationId', { conversationId })
-            .andWhere('image.id IS NOT NULL')
-            .orderBy('image.createdAt', 'DESC')
-            .take(limit)
-            .skip(skip)
-            .getManyAndCount()
+        try {
+            const [messages, count] = await this.messageRepository
+                .createQueryBuilder('message')
+                .leftJoinAndSelect('message.image', 'image')
+                .where('message.conversationId = :conversationId', { conversationId })
+                .andWhere('image.id IS NOT NULL')
+                .orderBy('image.createdAt', 'DESC')
+                .take(limit)
+                .skip(skip)
+                .getManyAndCount()
 
-        const mediaList = messages.map((msg) => msg.image)
+            const mediaList = messages.map((msg) => msg.image)
 
-        return { items: mediaList, ...paginateMeta(count, page, limit) }
+            return { items: mediaList, ...paginateMeta(count, page, limit) }
+        } catch {
+            throw new InternalServerException('Failed to fetch conversation media.')
+        }
     }
 
     public async formatConversation(conversation: Conversation, auth: Auth): Promise<Conversation> {

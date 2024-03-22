@@ -4,15 +4,13 @@ import { MediaSource } from '@entities/Media'
 import Message, { MessageType } from '@entities/Message'
 import Reaction from '@entities/Reaction'
 import User from '@entities/User'
-import ConversationService from '@modules/conversations/conversation.service'
-import UserService from '@modules/users/user.service'
 import MediaService from '@services/media.service'
 import { paginateMeta } from '@utils/paginateMeta'
 import { Auth, ListQueryParams, ListResponse } from '@utils/types'
 import { UploadedFile } from 'express-fileupload'
 import { inject, injectable } from 'inversify'
 import isEmpty from 'is-empty'
-import { BadRequestException, NotFoundException } from 'node-http-exceptions'
+import { BadRequestException, InternalServerException, NotFoundException } from 'node-http-exceptions'
 import { IsNull } from 'typeorm'
 
 @injectable()
@@ -22,12 +20,8 @@ export default class MessageService {
     public readonly reactionRepository = appDataSource.getRepository(Reaction)
 
     constructor(
-        @inject(UserService)
-        private readonly userService: UserService,
         @inject(MediaService)
-        private readonly mediaService: MediaService,
-        @inject(ConversationService)
-        private readonly conversationService: ConversationService
+        private readonly mediaService: MediaService
     ) {}
 
     public async getMessages(
@@ -48,16 +42,20 @@ export default class MessageService {
 
         if (!conversation) throw new NotFoundException('Conversation does not exists.')
 
-        const [messages, count] = await this.messageRepository.findAndCount({
-            where: { conversation: { id: conversationId } },
-            order: { createdAt: 'desc' },
-            take: limit,
-            skip,
-        })
+        try {
+            const [messages, count] = await this.messageRepository.findAndCount({
+                where: { conversation: { id: conversationId } },
+                order: { createdAt: 'desc' },
+                take: limit,
+                skip,
+            })
 
-        this.formatMessages(messages, conversation, auth)
+            this.formatMessages(messages, conversation, auth)
 
-        return { items: messages, ...paginateMeta(count, page, limit) }
+            return { items: messages, ...paginateMeta(count, page, limit) }
+        } catch {
+            throw new InternalServerException('Failed to fetch messages.')
+        }
     }
 
     public async sendMessage(
@@ -83,27 +81,31 @@ export default class MessageService {
 
         const message = new Message()
         message.conversation = { id: conversation.id } as Conversation
-        message.sender = auth.user
+        message.sender = auth.user as User
         message.type = type
 
-        if (image) {
-            message.image = await this.mediaService.save({
-                file: image.data,
-                creator: auth.user,
-                source: MediaSource.CONVERSATION,
-            })
+        try {
+            if (image) {
+                message.image = await this.mediaService.save({
+                    file: image.data,
+                    creator: auth.user,
+                    source: MediaSource.CONVERSATION,
+                })
+            }
+            if (body) {
+                message.body = body
+            }
+            await this.messageRepository.save(message)
+
+            conversation.lastMessage = { id: message.id } as Message
+            await this.conversationRepository.save(conversation)
+
+            this.formatMessage(message, conversation, auth)
+
+            return message
+        } catch {
+            throw new InternalServerException('Failed to save message.')
         }
-        if (body) {
-            message.body = body
-        }
-        await this.messageRepository.save(message)
-
-        conversation.lastMessage = { id: message.id } as Message
-        await this.conversationRepository.save(conversation)
-
-        this.formatMessage(message, conversation, auth)
-
-        return message
     }
 
     public async sendReaction(
@@ -151,13 +153,16 @@ export default class MessageService {
             reaction.sender = auth.user as User
             reaction.message = message
         }
-        await this.reactionRepository.save(reaction)
 
-        message.reactions = await this.reactionRepository.findBy({ message: { id: messageId } })
+        try {
+            await this.reactionRepository.save(reaction)
+            message.reactions = await this.reactionRepository.findBy({ message: { id: messageId } })
+            this.formatMessage(message, conversation, auth)
 
-        this.formatMessage(message, conversation, auth)
-
-        return message
+            return message
+        } catch {
+            throw new InternalServerException('Failed to save reaction.')
+        }
     }
 
     public async seenMessages(conversationId: string, auth: Auth): Promise<Message[]> {
@@ -175,25 +180,29 @@ export default class MessageService {
         const participant =
             conversation.user1.id !== auth.user.id ? conversation.user1 : conversation.user2
 
-        const messages = await this.messageRepository.find({
-            where: {
-                conversation: { id: conversationId },
-                sender: { id: participant.id },
-                seenAt: IsNull(),
-            },
-            order: { createdAt: 'DESC' },
-        })
+        try {
+            const messages = await this.messageRepository.find({
+                where: {
+                    conversation: { id: conversationId },
+                    sender: { id: participant.id },
+                    seenAt: IsNull(),
+                },
+                order: { createdAt: 'DESC' },
+            })
 
-        if (messages.length > 0) {
-            for (const message of messages) {
-                message.seenAt = new Date(Date.now())
-                await this.messageRepository.save(message)
+            if (messages.length > 0) {
+                for (const message of messages) {
+                    message.seenAt = new Date(Date.now())
+                    await this.messageRepository.save(message)
+                }
             }
+
+            this.formatMessages(messages, conversation, auth)
+
+            return messages
+        } catch {
+            throw new InternalServerException('Failed to mark messages as seen.')
         }
-
-        this.formatMessages(messages, conversation, auth)
-
-        return messages
     }
 
     public formatMessage(message: Message, conversation: Conversation, auth: Auth): Message {
