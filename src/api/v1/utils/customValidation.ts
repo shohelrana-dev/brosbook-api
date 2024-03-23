@@ -14,7 +14,7 @@ export class IsUsernameAlreadyExist implements ValidatorConstraintInterface {
     }
 
     defaultMessage(validationArguments?: ValidationArguments): string {
-        return 'username already taken'
+        return 'Username already exists, please try another one'
     }
 }
 
@@ -30,7 +30,7 @@ export class IsEmailAlreadyExist implements ValidatorConstraintInterface {
     }
 
     defaultMessage(validationArguments?: ValidationArguments): string {
-        return 'already have an account with the email address'
+        return 'Already have an account with the email address'
     }
 }
 
@@ -48,7 +48,7 @@ export class IsUsernameOrEmailNotExist implements ValidatorConstraintInterface {
     }
 
     defaultMessage(validationArguments?: ValidationArguments): string {
-        return 'account does not exist with this username or email'
+        return 'Account does not exist with this username or email'
     }
 }
 
@@ -63,7 +63,7 @@ export class MatchValue implements ValidatorConstraintInterface {
     }
 
     defaultMessage(args?: ValidationArguments): string {
-        return `should be same as ${args.constraints[0]}`
+        return `${args.targetName} must be same as ${args.constraints[0]}`
     }
 }
 
@@ -87,6 +87,6 @@ export class IsPasswordValid implements ValidatorConstraintInterface {
     }
 
     defaultMessage(validationArguments?: ValidationArguments): string {
-        return 'invalid password'
+        return 'Password is invalid'
     }
 }
