@@ -33,7 +33,7 @@ export default class AuthController {
         const { refreshToken, ...rest } = await this.authService.login(req.body)
 
         // Creates Secure Cookie with refresh token
-        res.cookie('refreshToken', refreshToken, {
+        res.cookie('__refresh_token', refreshToken, {
             httpOnly: true,
             secure: true,
             sameSite: 'none',
@@ -48,7 +48,7 @@ export default class AuthController {
         const { refreshToken, ...rest } = await this.authService.loginWithGoogle(req.body.token)
 
         // Creates Secure Cookie with refresh token
-        res.cookie('refreshToken', refreshToken, {
+        res.cookie('__refresh_token', refreshToken, {
             httpOnly: true,
             secure: true,
             sameSite: 'none',
@@ -61,7 +61,7 @@ export default class AuthController {
     @httpGet('/logout')
     public async logout(_: Request, res: Response): Promise<Response> {
         // clear refresh token cookie
-        res.clearCookie('refreshToken', {
+        res.clearCookie('__refresh_token', {
             httpOnly: true,
             secure: true,
             sameSite: 'none',
