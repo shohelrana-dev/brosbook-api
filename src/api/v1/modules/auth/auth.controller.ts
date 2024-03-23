@@ -72,7 +72,7 @@ export default class AuthController {
 
     @httpGet('/refresh_token')
     public async refreshToken(req: Request): Promise<AuthToken> {
-        return await this.authService.refreshToken(req.cookies.refreshToken)
+        return await this.authService.refreshToken(req.cookies['__refresh_token'])
     }
 
     @httpPost('/forgot_password', dtoValidationMiddleware(ForgotPasswordDTO))
