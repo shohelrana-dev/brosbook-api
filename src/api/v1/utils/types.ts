@@ -6,7 +6,7 @@ import User from '@database/entities/User'
 import { UploadedFile } from 'express-fileupload'
 
 export interface Auth {
-    user?: { id: string; email: string; username: string }
+    user?: { id: string; email: string; username: string; avatar: { url: string } }
     isAuthenticated: boolean
     isTokenExpired: boolean
 }

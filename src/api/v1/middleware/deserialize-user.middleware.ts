@@ -20,6 +20,7 @@ export default async function deserializeUserMiddleware(req: Request, _: Respons
                 id: decoded.id,
                 email: decoded.email,
                 username: decoded.username,
+                avatar: decoded.avatar,
             }
         }
     } catch (err) {
