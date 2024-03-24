@@ -1,23 +1,22 @@
 import { appDataSource } from '@config/datasource.config'
-import Comment from '@entities/Comment'
-import { Notification, NotificationTypes } from '@entities/Notification'
-import Post from '@entities/Post'
+import { Notification } from '@entities/Notification'
 import User from '@entities/User'
 import SocketService from '@services/socket.service'
 import { paginateMeta } from '@utils/paginateMeta'
-import { Auth, ListQueryParams, ListResponse } from '@utils/types'
+import { Auth, ListQueryParams, NotificationPayload } from '@utils/types'
 import { injectable } from 'inversify'
 import { BadRequestException } from 'node-http-exceptions'
 import { IsNull } from 'typeorm'
 
+/**
+ * @class NotificationService
+ * @desc Service for handling notification related operations.
+ */
 @injectable()
 export default class NotificationService {
     public readonly notificationRepository = appDataSource.getRepository(Notification)
 
-    async getNotifications(
-        { page, limit }: ListQueryParams,
-        auth: Auth
-    ): Promise<ListResponse<Notification>> {
+    public async getNotifications({ page, limit }: ListQueryParams, auth: Auth) {
         const skip = limit * (page - 1)
 
         const [notifications, count] = await this.notificationRepository.findAndCount({
@@ -31,14 +30,14 @@ export default class NotificationService {
         return { items: notifications, ...paginateMeta(count, page, limit) }
     }
 
-    async getUnreadNotificationsCount(auth: Auth): Promise<number> {
+    public async getUnreadNotificationsCount(auth: Auth) {
         return await this.notificationRepository.countBy({
             recipient: { id: auth.user.id },
             readAt: IsNull(),
         })
     }
 
-    async readNotifications(auth: Auth) {
+    public async readNotifications(auth: Auth) {
         const notifications = await this.notificationRepository.findBy({
             recipient: { id: auth.user.id },
             readAt: IsNull(),
@@ -54,13 +53,10 @@ export default class NotificationService {
         return notifications
     }
 
-    async create(
-        data: { recipient: User; post?: Post; comment?: Comment; type: NotificationTypes },
-        auth: Auth
-    ): Promise<Notification> {
-        if (!data) throw new BadRequestException('Create notification payload is empty.')
+    public async create(payload: NotificationPayload, auth: Auth) {
+        if (!payload) throw new BadRequestException('Create notification payload is empty.')
 
-        const { recipient, type, post, comment } = data
+        const { recipient, type, post, comment } = payload
         const initiator = auth.user as User
 
         const isSameUserAndNotNeedNotification = recipient.id === initiator.id
@@ -85,13 +81,10 @@ export default class NotificationService {
         return notification
     }
 
-    async delete(
-        data: { recipient: User; post?: Post; comment?: Comment; type: NotificationTypes },
-        auth: Auth
-    ): Promise<Notification> {
-        if (!data) throw new BadRequestException('Create notification payload is empty.')
+    public async delete(payload: NotificationPayload, auth: Auth) {
+        if (!payload) throw new BadRequestException('Create notification payload is empty.')
 
-        const { recipient, type, post, comment } = data
+        const { recipient, type, post, comment } = payload
 
         const notification = await this.notificationRepository.findOneBy({
             initiator: { id: auth.user.id },

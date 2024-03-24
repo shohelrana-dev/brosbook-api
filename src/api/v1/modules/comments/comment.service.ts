@@ -6,15 +6,14 @@ import User from '@entities/User'
 import NotificationService from '@modules/notifications/notification.service'
 import PostService from '@modules/posts/post.service'
 import { paginateMeta } from '@utils/paginateMeta'
-import { Auth, ListQueryParams, ListResponse } from '@utils/types'
+import { Auth, ListQueryParams } from '@utils/types'
 import { inject, injectable } from 'inversify'
-import {
-    BadRequestException,
-    ForbiddenException,
-    InternalServerException,
-    NotFoundException,
-} from 'node-http-exceptions'
+import { BadRequestException, ForbiddenException, NotFoundException } from 'node-http-exceptions'
 
+/**
+ * @class CommentService
+ * @desc Service for handling comment related operations.
+ */
 @injectable()
 export default class CommentService {
     public readonly commentRepository = appDataSource.getRepository(Comment)
@@ -27,35 +26,25 @@ export default class CommentService {
         public readonly notificationService: NotificationService
     ) {}
 
-    public async getComments(
-        postId: string,
-        params: ListQueryParams,
-        auth: Auth
-    ): Promise<ListResponse<Comment>> {
+    public async getComments(postId: string, params: ListQueryParams, auth: Auth) {
         if (!postId) throw new BadRequestException('Post id is empty.')
 
         const page = params.page
         const limit = params.limit
         const skip = limit * (page - 1)
 
-        try {
-            const [comments, count] = await this.commentRepository.findAndCount({
-                where: { post: { id: postId } },
-                order: { createdAt: 'DESC' },
-                take: limit,
-                skip,
-            })
-            await this.formatComments(comments, auth)
-            return { items: comments, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch comments')
-        }
+        const [comments, count] = await this.commentRepository.findAndCount({
+            where: { post: { id: postId } },
+            order: { createdAt: 'DESC' },
+            take: limit,
+            skip,
+        })
+        await this.formatComments(comments, auth)
+
+        return { items: comments, ...paginateMeta(count, page, limit) }
     }
 
-    public async create(
-        { postId, body }: { body: string; postId: string },
-        auth: Auth
-    ): Promise<Comment> {
+    public async create({ postId, body }: { body: string; postId: string }, auth: Auth) {
         if (!postId) throw new BadRequestException('Post id is empty.')
         if (!body) throw new BadRequestException('Comment body is empty.')
 
@@ -65,32 +54,28 @@ export default class CommentService {
         const author = await User.findOneBy({ id: auth.user.id })
         if (!author) throw new BadRequestException('Author does not exists.')
 
-        try {
-            const comment = new Comment()
-            comment.author = author
-            comment.body = body
-            comment.post = post
-            await this.commentRepository.save(comment)
+        const comment = new Comment()
+        comment.author = author
+        comment.body = body
+        comment.post = post
+        await this.commentRepository.save(comment)
 
-            this.updatePostCommentsCount(post.id)
+        this.updatePostCommentsCount(post.id)
 
-            this.notificationService.create(
-                {
-                    recipient: post.author,
-                    type: NotificationTypes.COMMENTED_POST,
-                    post,
-                    comment,
-                },
-                auth
-            )
+        this.notificationService.create(
+            {
+                recipient: post.author,
+                type: NotificationTypes.COMMENTED_POST,
+                post,
+                comment,
+            },
+            auth
+        )
 
-            return comment
-        } catch {
-            throw new InternalServerException('Failed to save comment.')
-        }
+        return comment
     }
 
-    public async delete(commentId: string, auth: Auth): Promise<Comment> {
+    public async delete(commentId: string, auth: Auth) {
         if (!commentId) throw new BadRequestException('Comment id is empty.')
 
         const comment = await this.commentRepository.findOne({
@@ -104,16 +89,13 @@ export default class CommentService {
             throw new ForbiddenException('You are not owner of the comment.')
         }
 
-        try {
-            await this.commentRepository.delete({ id: comment.id })
-            this.updatePostCommentsCount(comment.post.id)
-            return comment
-        } catch {
-            throw new InternalServerException('Failed to delete comment.')
-        }
+        await this.commentRepository.delete({ id: comment.id })
+        this.updatePostCommentsCount(comment.post.id)
+
+        return comment
     }
 
-    public async like(commentId: string, auth: Auth): Promise<Comment> {
+    public async like(commentId: string, auth: Auth) {
         if (!commentId) throw new BadRequestException('Comment id is empty.')
 
         const comment = await this.commentRepository.findOne({
@@ -130,34 +112,30 @@ export default class CommentService {
 
         if (liked) throw new BadRequestException('The user already liked the comment.')
 
-        try {
-            const like = new CommentLike()
-            like.comment = comment
-            like.user = auth.user as User
-            await this.likeRepository.save(like)
+        const like = new CommentLike()
+        like.comment = comment
+        like.user = auth.user as User
+        await this.likeRepository.save(like)
 
-            this.updateCommentLikesCount(comment.id)
+        this.updateCommentLikesCount(comment.id)
 
-            comment.isViewerLiked = true
-            comment.likesCount = Number(comment.likesCount) + 1
+        comment.isViewerLiked = true
+        comment.likesCount = Number(comment.likesCount) + 1
 
-            this.notificationService.create(
-                {
-                    recipient: comment.author,
-                    type: NotificationTypes.LIKED_COMMENT,
-                    post: comment.post,
-                    comment,
-                },
-                auth
-            )
+        this.notificationService.create(
+            {
+                recipient: comment.author,
+                type: NotificationTypes.LIKED_COMMENT,
+                post: comment.post,
+                comment,
+            },
+            auth
+        )
 
-            return comment
-        } catch {
-            throw new InternalServerException('Failed to like comment.')
-        }
+        return comment
     }
 
-    public async unlike(commentId: string, auth: Auth): Promise<Comment> {
+    public async unlike(commentId: string, auth: Auth) {
         if (!commentId) throw new BadRequestException('Comment id is empty.')
 
         const comment = await this.commentRepository.findOneBy({ id: commentId })
@@ -171,23 +149,19 @@ export default class CommentService {
 
         if (!like) throw new BadRequestException('The user did not like the comment.')
 
-        try {
-            await this.likeRepository.remove(like)
+        await this.likeRepository.remove(like)
 
-            this.updateCommentLikesCount(comment.id)
+        this.updateCommentLikesCount(comment.id)
 
-            comment.isViewerLiked = false
-            comment.likesCount = Number(comment.likesCount) - 1
+        comment.isViewerLiked = false
+        comment.likesCount = Number(comment.likesCount) - 1
 
-            this.notificationService.delete(
-                { recipient: comment.author, comment, type: NotificationTypes.LIKED_COMMENT },
-                auth
-            )
+        this.notificationService.delete(
+            { recipient: comment.author, comment, type: NotificationTypes.LIKED_COMMENT },
+            auth
+        )
 
-            return comment
-        } catch {
-            throw new InternalServerException('Failed to unlike comment.')
-        }
+        return comment
     }
 
     private updateCommentLikesCount(commentId: string) {
@@ -217,7 +191,7 @@ export default class CommentService {
         return comment
     }
 
-    async formatComments(comments: Comment[], auth: Auth): Promise<Comment[]> {
+    async formatComments(comments: Comment[], auth: Auth) {
         for (const comment of comments) {
             await this.formatComment(comment, auth)
         }

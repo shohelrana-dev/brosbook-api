@@ -10,8 +10,7 @@ import UserService from './user.service'
 
 /**
  * @class UserController
- * @desc Responsible for handling API requests for the
- * /users route.
+ * @desc Responsible for handling API requests for the /users route.
  **/
 @controller('/users')
 export default class UserController {

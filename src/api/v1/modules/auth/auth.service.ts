@@ -19,8 +19,9 @@ import verifyGoogleOAuthToken from '@utils/verifyGoogleOAuthToken'
 import { inject, injectable } from 'inversify'
 
 /**
- * Service for handling user authentication and authorization.
- */
+ * @class AuthService
+ * @desc Service for handling user authentication related operations.
+ * */
 @injectable()
 export default class AuthService {
     private readonly userRepository = appDataSource.getRepository(User)
@@ -30,32 +31,14 @@ export default class AuthService {
         private readonly userService: UserService
     ) {}
 
-    /**
-     * Signs up a new user and sends an email verification link.
-     *
-     * @param userData - The user data to sign up.
-     * @returns The signed up user.
-     * @throws BadRequestException if the user data is empty.
-     */
     public async signup(userData: CreateUserDTO): Promise<User> {
         if (isEmpty(userData)) throw new BadRequestException('Signup user data is empty.')
 
-        try {
-            const user = await this.userService.create(userData)
-            await EmailService.sendEmailVerificationLink(userData.email, user.username)
-            return user
-        } catch {
-            throw new InternalServerException('Failed to create user.')
-        }
+        const user = await this.userService.create(userData)
+        await EmailService.sendEmailVerificationLink(userData.email, user.username)
+        return user
     }
 
-    /**
-     * Logs in a user with the provided credentials.
-     *
-     * @param userData - The user credentials to log in.
-     * @returns The login token and user data.
-     * @throws BadRequestException if the user data is empty or invalid.
-     */
     public async login(
         userData: LoginUserDTO
     ): Promise<AuthToken & { user: User; refreshToken: string }> {
@@ -89,12 +72,6 @@ export default class AuthService {
         return { user, ...accessTokenData, refreshToken }
     }
 
-    /**
-     * Logs in a user with a Google OAuth token.
-     *
-     * @param token - The Google OAuth token.
-     * @returns The login token and user data.
-     */
     public async loginWithGoogle(
         token: string
     ): Promise<AuthToken & { user: User; refreshToken: string }> {
@@ -119,13 +96,6 @@ export default class AuthService {
         return { user, ...accessTokenData, refreshToken }
     }
 
-    /**
-     * Refresh token with the provided refreshTOken.
-     *
-     * @param refreshToken
-     * @returns AuthToken.
-     * @throws Error if refreshToken is empty or invalid.
-     */
     public async refreshToken(refreshToken: string): Promise<AuthToken> {
         if (!refreshToken) throw new ForbiddenException('Refresh token is empty.')
 
@@ -155,71 +125,49 @@ export default class AuthService {
         }
     }
 
-    /**
-     * Sends a password reset email to the user with the provided email address.
-     *
-     * @param email - The email address of the user to reset the password.
-     * @throws BadRequestException if the user does not exist.
-     */
-    public async forgotPassword(email: string): Promise<void> {
+    public async forgotPassword(email: string) {
         const user = await this.userRepository.findOneBy({ email })
 
         if (!user) throw new BadRequestException('User not found with the email.')
 
         try {
             await EmailService.sendResetPasswordLink(email)
+
+            return user
         } catch {
             throw new InternalServerException('Failed to send password reset email.')
         }
     }
 
-    /**
-     * Resets the password of a user with the provided token.
-     *
-     * @param payload - The password reset token and new password.
-     * @returns The updated user data.
-     * @throws BadRequestException if the token is invalid or the user does not exist.
-     */
-    public async resetPassword(payload: ResetPasswordDTO): Promise<User> {
+    public async resetPassword(payload: ResetPasswordDTO) {
         const { password, token } = payload
         let email = null
 
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET) as any
+            const decoded = jwt.verify(token, process.env['ACCESS_TOKEN_SECRET']) as any
             email = decoded.email
         } catch (e) {
-            throw new BadRequestException('Invalid token.')
+            throw new BadRequestException('Token is invalid.')
         }
 
         let user = await this.userRepository.findOneBy({ email: email })
 
         if (!user) throw new BadRequestException('User does not exists.')
 
-        try {
-            user.password = await argon2.hash(password)
-            user = await this.userRepository.save(user)
-            delete user.password
+        user.password = await argon2.hash(password)
+        user = await this.userRepository.save(user)
+        delete user.password
 
-            return user
-        } catch {
-            throw new InternalServerException('Failed to reset password.')
-        }
+        return user
     }
 
-    /**
-     * Verifies the email address of a user with the provided token.
-     *
-     * @param token - The email verification token.
-     * @returns The updated user data.
-     * @throws BadRequestException if the token is invalid or the user does not exist or the email address is already verified.
-     */
-    public async verifyEmail(token: string): Promise<User> {
+    public async verifyEmail(token: string) {
         let email = null
 
         try {
-            const payload = jwt.verify(token, process.env.JWT_SECRET) as any
+            const payload = jwt.verify(token, process.env['ACCESS_TOKEN_SECRET']) as any
             email = payload.email
-        } catch (e) {
+        } catch {
             throw new BadRequestException('Invalid token.')
         }
 
@@ -228,26 +176,16 @@ export default class AuthService {
         if (!user) throw new BadRequestException('User does not exists.')
 
         if (user.hasEmailVerified) {
-            throw new BadRequestException('The email address already verified')
+            throw new BadRequestException('Your email address already verified')
         }
 
-        try {
-            user.emailVerifiedAt = new Date(Date.now())
-            user = await this.userRepository.save(user)
-            delete user.password
+        user.emailVerifiedAt = new Date(Date.now())
+        user = await this.userRepository.save(user)
+        delete user.password
 
-            return user
-        } catch {
-            throw new InternalServerException('Failed to verify email address.')
-        }
+        return user
     }
 
-    /**
-     * Resends an email verification link to the user with the provided email address.
-     *
-     * @param email - The email address of the user to resend the email verification link.
-     * @throws BadRequestException if the user does not exist.
-     */
     public async resendEmailVerificationLink(email: string) {
         const user = await this.userRepository.findOneBy({ email })
 
@@ -260,12 +198,6 @@ export default class AuthService {
         }
     }
 
-    /**
-     * Creates a access token using JSON Web Token (JWT) for a given user
-     *
-     * @param user - The user object for which the token is being created
-     * @returns AuthToken
-     */
     private static createAccessToken(user: User): AuthToken {
         const tokenPayload = {
             id: user.id,
@@ -288,13 +220,7 @@ export default class AuthService {
         }
     }
 
-    /**
-     * Creates a refresh token using JSON Web Token (JWT) for a given user
-     *
-     * @param user - The user object for which the token is being created
-     * @returns string
-     */
-    private static createRefreshToken(user: User): string {
+    private static createRefreshToken(user: User) {
         const tokenPayload = {
             id: user.id,
             username: user.username,

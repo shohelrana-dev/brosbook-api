@@ -11,8 +11,7 @@ import AuthService from './auth.service'
 
 /**
  * @class AuthController
- * @desc Responsible for handling API requests for the
- * /auth route.
+ * @desc Responsible for handling API requests for the /auth route.
  **/
 @controller('/auth')
 export default class AuthController {
@@ -97,7 +96,7 @@ export default class AuthController {
     public async resendEmailVerificationLink(req: Request): Promise<{ message: string }> {
         await this.authService.resendEmailVerificationLink(req.body.email)
 
-        return { message: 'Email has been resent' }
+        return { message: 'Email verification link has been sent' }
     }
 
     @httpGet('/email_verification/:token')

@@ -9,8 +9,7 @@ import AccountService from './account.service'
 
 /**
  * @class AccountController
- * @desc Responsible for handling API requests for the
- * /account route.
+ * @desc Responsible for handling API requests for the /account route.
  **/
 @controller('/account', authMiddleware)
 export default class AccountController {

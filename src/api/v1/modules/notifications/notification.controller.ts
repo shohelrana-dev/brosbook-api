@@ -8,8 +8,7 @@ import { controller, httpGet, httpPatch } from 'inversify-express-utils'
 
 /**
  * @class NotificationController
- * @desc Responsible for handling API requests for the
- * /notifications route.
+ * @desc Responsible for handling API requests for the /notifications route.
  **/
 @controller('/notifications', authMiddleware)
 export default class NotificationController {

@@ -8,8 +8,7 @@ import CommentService from './comment.service'
 
 /**
  * @class CommentController
- * @desc Responsible for handling API requests for the
- * /posts/:postId/comments route.
+ * @desc Responsible for handling API requests for the /posts/:postId/comments route.
  **/
 @controller('/posts/:postId/comments')
 export default class CommentController {

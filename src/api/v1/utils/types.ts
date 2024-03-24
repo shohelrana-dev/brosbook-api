@@ -1,3 +1,10 @@
+import Comment from '@database/entities/Comment'
+import { MessageType } from '@database/entities/Message'
+import { NotificationTypes } from '@database/entities/Notification'
+import Post from '@database/entities/Post'
+import User from '@database/entities/User'
+import { UploadedFile } from 'express-fileupload'
+
 export interface Auth {
     user?: { id: string; email: string; username: string }
     isAuthenticated: boolean
@@ -33,4 +40,23 @@ export interface SearchQueryParams extends ListQueryParams {
 
 export interface PostsQueryParams extends ListQueryParams {
     authorId?: string
+}
+
+export interface MessagePayload {
+    image: UploadedFile
+    body: string
+    type: MessageType
+}
+
+export interface ReactionPayload {
+    conversationId: string
+    messageId: string
+    name: string
+}
+
+export interface NotificationPayload {
+    recipient: User
+    post?: Post
+    comment?: Comment
+    type: NotificationTypes
 }

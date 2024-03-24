@@ -11,8 +11,7 @@ import MessageService from './message.service'
 
 /**
  * @class MessageController
- * @desc Responsible for handling API requests for the
- * /conversations/:conversationId/messages route.
+ * @desc Responsible for handling API requests for the /conversations/:conversationId/messages route.
  **/
 @controller('/conversations/:conversationId/messages', authMiddleware)
 export default class MessageController {

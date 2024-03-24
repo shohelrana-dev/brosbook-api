@@ -9,8 +9,7 @@ import PostService from './post.service'
 
 /**
  * @class PostController
- * @desc Responsible for handling API requests for the
- * /posts route.
+ * @desc Responsible for handling API requests for the /posts route.
  **/
 @controller('/posts')
 export default class PostController {

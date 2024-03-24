@@ -8,12 +8,16 @@ import NotificationService from '@modules/notifications/notification.service'
 import UserService from '@modules/users/user.service'
 import MediaService from '@services/media.service'
 import { paginateMeta } from '@utils/paginateMeta'
-import { Auth, ListResponse, PostsQueryParams } from '@utils/types'
+import { Auth, PostsQueryParams } from '@utils/types'
 import { UploadedFile } from 'express-fileupload'
 import { inject, injectable } from 'inversify'
 import isEmpty from 'is-empty'
-import { BadRequestException, InternalServerException, NotFoundException } from 'node-http-exceptions'
+import { BadRequestException, NotFoundException } from 'node-http-exceptions'
 
+/**
+ * @class PostService
+ * @desc Service for handling post related operations.
+ */
 @injectable()
 export default class PostService {
     public readonly postRepository = appDataSource.getRepository(Post)
@@ -28,41 +32,37 @@ export default class PostService {
         private readonly mediaService: MediaService
     ) {}
 
-    public async create(postData: { body?: string; image: UploadedFile }, auth: Auth): Promise<Post> {
+    public async create(postData: { body?: string; image: UploadedFile }, auth: Auth) {
         if (isEmpty(postData)) throw new BadRequestException('Post data is empty.')
 
         const { image, body } = postData
 
-        try {
-            if (image) {
-                //save image
-                const savedImage = await this.mediaService.save({
-                    file: image.data,
-                    creator: auth.user,
-                    source: MediaSource.POST,
-                })
-
-                //save post
-                const post = new Post()
-                post.author = auth.user as User
-                post.image = savedImage
-                post.body = body
-
-                return await this.postRepository.save(post)
-            }
+        if (image) {
+            //save image
+            const savedImage = await this.mediaService.save({
+                file: image.data,
+                creator: auth.user,
+                source: MediaSource.POST,
+            })
 
             //save post
             const post = new Post()
             post.author = auth.user as User
+            post.image = savedImage
             post.body = body
 
             return await this.postRepository.save(post)
-        } catch {
-            throw new InternalServerException('Failed to save post.')
         }
+
+        //save post
+        const post = new Post()
+        post.author = auth.user as User
+        post.body = body
+
+        return await this.postRepository.save(post)
     }
 
-    public async getPostById(postId: string, auth: Auth): Promise<Post> {
+    public async getPostById(postId: string, auth: Auth) {
         if (!postId) throw new BadRequestException('Post id is empty.')
 
         try {
@@ -73,27 +73,23 @@ export default class PostService {
         }
     }
 
-    public async delete(postId: string): Promise<Post> {
+    public async delete(postId: string) {
         if (!postId) throw new BadRequestException('Post id is empty.')
 
         const post = await this.postRepository.findOneBy({ id: postId })
 
         if (!post) throw new NotFoundException('Post does not exists.')
 
-        try {
-            await this.postRepository.remove(post)
+        await this.postRepository.remove(post)
 
-            if (post.image) {
-                this.mediaService.delete(post.image.id)
-            }
-
-            return post
-        } catch {
-            throw new InternalServerException('Failed to delete post.')
+        if (post.image) {
+            this.mediaService.delete(post.image.id)
         }
+
+        return post
     }
 
-    public async getPosts(params: PostsQueryParams, auth: Auth): Promise<ListResponse<Post>> {
+    public async getPosts(params: PostsQueryParams, auth: Auth) {
         const { authorId, page, limit } = params
         const skip = limit * (page - 1)
 
@@ -101,26 +97,22 @@ export default class PostService {
             return await this.getUserPosts(params, auth)
         }
 
-        try {
-            const [posts, count] = await this.postRepository
-                .createQueryBuilder('post')
-                .leftJoinAndSelect('post.author', 'author')
-                .leftJoinAndSelect('author.avatar', 'avatar')
-                .leftJoinAndSelect('post.image', 'image')
-                .orderBy('post.createdAt', 'DESC')
-                .skip(skip)
-                .take(limit)
-                .getManyAndCount()
+        const [posts, count] = await this.postRepository
+            .createQueryBuilder('post')
+            .leftJoinAndSelect('post.author', 'author')
+            .leftJoinAndSelect('author.avatar', 'avatar')
+            .leftJoinAndSelect('post.image', 'image')
+            .orderBy('post.createdAt', 'DESC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount()
 
-            await this.formatPosts(posts, auth)
+        await this.formatPosts(posts, auth)
 
-            return { items: posts, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch posts')
-        }
+        return { items: posts, ...paginateMeta(count, page, limit) }
     }
 
-    public async getUserPosts(params: PostsQueryParams, auth: Auth): Promise<ListResponse<Post>> {
+    public async getUserPosts(params: PostsQueryParams, auth: Auth) {
         const authorId = params.authorId
         const page = params.page || 1
         const limit = params.limit || 6
@@ -131,57 +123,46 @@ export default class PostService {
         const user = await User.findOneBy({ id: authorId })
         if (!user) throw new BadRequestException("User doesn't exists.")
 
-        try {
-            const [posts, count] = await this.postRepository
-                .createQueryBuilder('post')
-                .leftJoinAndSelect('post.author', 'author')
-                .leftJoinAndSelect('author.avatar', 'avatar')
-                .leftJoinAndSelect('post.image', 'image')
-                .where('author.id = :authorId', { authorId })
-                .orderBy('post.createdAt', 'DESC')
-                .skip(skip)
-                .take(limit)
-                .getManyAndCount()
+        const [posts, count] = await this.postRepository
+            .createQueryBuilder('post')
+            .leftJoinAndSelect('post.author', 'author')
+            .leftJoinAndSelect('author.avatar', 'avatar')
+            .leftJoinAndSelect('post.image', 'image')
+            .where('author.id = :authorId', { authorId })
+            .orderBy('post.createdAt', 'DESC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount()
 
-            await this.formatPosts(posts, auth)
+        await this.formatPosts(posts, auth)
 
-            return { items: posts, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch user posts')
-        }
+        return { items: posts, ...paginateMeta(count, page, limit) }
     }
 
-    public async getFeedPosts(
-        { page, limit }: PostsQueryParams,
-        auth: Auth
-    ): Promise<ListResponse<Post>> {
+    public async getFeedPosts({ page, limit }: PostsQueryParams, auth: Auth) {
         if (!auth.isAuthenticated) {
             return this.getPosts({ page, limit }, auth)
         }
         const skip = limit * (page - 1)
 
-        try {
-            const [posts, count] = await this.postRepository
-                .createQueryBuilder('post')
-                .leftJoinAndSelect('post.author', 'author')
-                .leftJoin('author.followers', 'follower')
-                .leftJoinAndSelect('author.avatar', 'avatar')
-                .leftJoinAndSelect('post.image', 'image')
-                .where('follower.id = :followerId', { followerId: auth.user.id })
-                .orderBy('post.createdAt', 'DESC')
-                .skip(skip)
-                .take(limit)
-                .getManyAndCount()
+        const [posts, count] = await this.postRepository
+            .createQueryBuilder('post')
+            .leftJoinAndSelect('post.author', 'author')
+            .leftJoin('author.followers', 'follower')
+            .leftJoinAndSelect('author.avatar', 'avatar')
+            .leftJoinAndSelect('post.image', 'image')
+            .where('follower.id = :followerId', { followerId: auth.user.id })
+            .orderBy('post.createdAt', 'DESC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount()
 
-            await this.formatPosts(posts, auth)
+        await this.formatPosts(posts, auth)
 
-            return { items: posts, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch feed posts.')
-        }
+        return { items: posts, ...paginateMeta(count, page, limit) }
     }
 
-    public async like(postId: string, auth: Auth): Promise<Post> {
+    public async like(postId: string, auth: Auth) {
         if (!postId) throw new BadRequestException('Post id is empty.')
 
         const post = await this.postRepository.findOneBy({ id: postId })
@@ -195,33 +176,29 @@ export default class PostService {
 
         if (liked) throw new BadRequestException('The user already liked the post.')
 
-        try {
-            const like = new PostLike()
-            like.post = post
-            like.user = auth.user as User
-            await this.likeRepository.save(like)
+        const like = new PostLike()
+        like.post = post
+        like.user = auth.user as User
+        await this.likeRepository.save(like)
 
-            this.updatePostLikesCount(post)
+        this.updatePostLikesCount(post)
 
-            post.isViewerLiked = true
-            post.likesCount = Number(post.likesCount) + 1
+        post.isViewerLiked = true
+        post.likesCount = Number(post.likesCount) + 1
 
-            this.notificationService.create(
-                {
-                    recipient: post.author,
-                    type: NotificationTypes.LIKED_POST,
-                    post,
-                },
-                auth
-            )
+        this.notificationService.create(
+            {
+                recipient: post.author,
+                type: NotificationTypes.LIKED_POST,
+                post,
+            },
+            auth
+        )
 
-            return post
-        } catch {
-            throw new InternalServerException('Failed to like post.')
-        }
+        return post
     }
 
-    public async unlike(postId: string, auth: Auth): Promise<Post> {
+    public async unlike(postId: string, auth: Auth) {
         if (!postId) throw new BadRequestException('Post id is empty.')
 
         const post = await this.postRepository.findOneBy({ id: postId })
@@ -235,23 +212,19 @@ export default class PostService {
 
         if (!like) throw new BadRequestException('The user did not like the post.')
 
-        try {
-            await this.likeRepository.remove(like)
+        await this.likeRepository.remove(like)
 
-            this.updatePostLikesCount(post)
+        this.updatePostLikesCount(post)
 
-            post.isViewerLiked = false
-            post.likesCount = Number(post.likesCount) - 1
+        post.isViewerLiked = false
+        post.likesCount = Number(post.likesCount) - 1
 
-            this.notificationService.delete(
-                { recipient: post.author, post, type: NotificationTypes.LIKED_POST },
-                auth
-            )
+        this.notificationService.delete(
+            { recipient: post.author, post, type: NotificationTypes.LIKED_POST },
+            auth
+        )
 
-            return post
-        } catch {
-            throw new InternalServerException('Failed to unlike post.')
-        }
+        return post
     }
 
     private updatePostLikesCount(post: Post) {

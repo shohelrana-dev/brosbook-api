@@ -1,18 +1,21 @@
 import { appDataSource } from '@config/datasource.config'
 import Conversation from '@entities/Conversation'
 import { MediaSource } from '@entities/Media'
-import Message, { MessageType } from '@entities/Message'
+import Message from '@entities/Message'
 import Reaction from '@entities/Reaction'
 import User from '@entities/User'
 import MediaService from '@services/media.service'
 import { paginateMeta } from '@utils/paginateMeta'
-import { Auth, ListQueryParams, ListResponse } from '@utils/types'
-import { UploadedFile } from 'express-fileupload'
+import { Auth, ListQueryParams, MessagePayload, ReactionPayload } from '@utils/types'
 import { inject, injectable } from 'inversify'
 import isEmpty from 'is-empty'
-import { BadRequestException, InternalServerException, NotFoundException } from 'node-http-exceptions'
+import { BadRequestException, NotFoundException } from 'node-http-exceptions'
 import { IsNull } from 'typeorm'
 
+/**
+ * @class MessageService
+ * @desc Service for handling message related operations.
+ */
 @injectable()
 export default class MessageService {
     public readonly conversationRepository = appDataSource.getRepository(Conversation)
@@ -24,11 +27,7 @@ export default class MessageService {
         private readonly mediaService: MediaService
     ) {}
 
-    public async getMessages(
-        conversationId: string,
-        params: ListQueryParams,
-        auth: Auth
-    ): Promise<ListResponse<Message>> {
+    public async getMessages(conversationId: string, params: ListQueryParams, auth: Auth) {
         if (!conversationId) throw new BadRequestException('ConversationId id is empty.')
 
         const page = params.page
@@ -42,31 +41,19 @@ export default class MessageService {
 
         if (!conversation) throw new NotFoundException('Conversation does not exists.')
 
-        try {
-            const [messages, count] = await this.messageRepository.findAndCount({
-                where: { conversation: { id: conversationId } },
-                order: { createdAt: 'desc' },
-                take: limit,
-                skip,
-            })
+        const [messages, count] = await this.messageRepository.findAndCount({
+            where: { conversation: { id: conversationId } },
+            order: { createdAt: 'desc' },
+            take: limit,
+            skip,
+        })
 
-            this.formatMessages(messages, conversation, auth)
+        this.formatMessages(messages, conversation, auth)
 
-            return { items: messages, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch messages.')
-        }
+        return { items: messages, ...paginateMeta(count, page, limit) }
     }
 
-    public async sendMessage(
-        conversationId: string,
-        messageData: {
-            image: UploadedFile
-            body: string
-            type: MessageType
-        },
-        auth: Auth
-    ): Promise<Message> {
+    public async sendMessage(conversationId: string, messageData: MessagePayload, auth: Auth) {
         if (!conversationId) throw new BadRequestException('ConversationId id is empty.')
 
         const { image, body, type } = messageData
@@ -84,38 +71,27 @@ export default class MessageService {
         message.sender = auth.user as User
         message.type = type
 
-        try {
-            if (image) {
-                message.image = await this.mediaService.save({
-                    file: image.data,
-                    creator: auth.user,
-                    source: MediaSource.CONVERSATION,
-                })
-            }
-            if (body) {
-                message.body = body
-            }
-            await this.messageRepository.save(message)
-
-            conversation.lastMessage = { id: message.id } as Message
-            await this.conversationRepository.save(conversation)
-
-            this.formatMessage(message, conversation, auth)
-
-            return message
-        } catch {
-            throw new InternalServerException('Failed to save message.')
+        if (image) {
+            message.image = await this.mediaService.save({
+                file: image.data,
+                creator: auth.user,
+                source: MediaSource.CONVERSATION,
+            })
         }
+        if (body) {
+            message.body = body
+        }
+        await this.messageRepository.save(message)
+
+        conversation.lastMessage = { id: message.id } as Message
+        await this.conversationRepository.save(conversation)
+
+        this.formatMessage(message, conversation, auth)
+
+        return message
     }
 
-    public async sendReaction(
-        reactionData: {
-            conversationId: string
-            messageId: string
-            name: string
-        },
-        auth: Auth
-    ): Promise<Message> {
+    public async sendReaction(reactionData: ReactionPayload, auth: Auth) {
         const { conversationId, messageId, name } = reactionData
 
         if (isEmpty(reactionData)) throw new BadRequestException('Reaction data is empty.')
@@ -154,18 +130,14 @@ export default class MessageService {
             reaction.message = message
         }
 
-        try {
-            await this.reactionRepository.save(reaction)
-            message.reactions = await this.reactionRepository.findBy({ message: { id: messageId } })
-            this.formatMessage(message, conversation, auth)
+        await this.reactionRepository.save(reaction)
+        message.reactions = await this.reactionRepository.findBy({ message: { id: messageId } })
+        this.formatMessage(message, conversation, auth)
 
-            return message
-        } catch {
-            throw new InternalServerException('Failed to save reaction.')
-        }
+        return message
     }
 
-    public async seenMessages(conversationId: string, auth: Auth): Promise<Message[]> {
+    public async seenMessages(conversationId: string, auth: Auth) {
         if (!conversationId) throw new BadRequestException('Conversation id is empty.')
 
         const conversation = await this.conversationRepository.findOne({
@@ -180,29 +152,25 @@ export default class MessageService {
         const participant =
             conversation.user1.id !== auth.user.id ? conversation.user1 : conversation.user2
 
-        try {
-            const messages = await this.messageRepository.find({
-                where: {
-                    conversation: { id: conversationId },
-                    sender: { id: participant.id },
-                    seenAt: IsNull(),
-                },
-                order: { createdAt: 'DESC' },
-            })
+        const messages = await this.messageRepository.find({
+            where: {
+                conversation: { id: conversationId },
+                sender: { id: participant.id },
+                seenAt: IsNull(),
+            },
+            order: { createdAt: 'DESC' },
+        })
 
-            if (messages.length > 0) {
-                for (const message of messages) {
-                    message.seenAt = new Date(Date.now())
-                    await this.messageRepository.save(message)
-                }
+        if (messages.length > 0) {
+            for (const message of messages) {
+                message.seenAt = new Date(Date.now())
+                await this.messageRepository.save(message)
             }
-
-            this.formatMessages(messages, conversation, auth)
-
-            return messages
-        } catch {
-            throw new InternalServerException('Failed to mark messages as seen.')
         }
+
+        this.formatMessages(messages, conversation, auth)
+
+        return messages
     }
 
     public formatMessage(message: Message, conversation: Conversation, auth: Auth): Message {

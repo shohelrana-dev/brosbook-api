@@ -9,8 +9,7 @@ import ConversationService from './conversation.service'
 
 /**
  * @class ConversationController
- * @desc Responsible for handling API requests for the
- * /conversations route.
+ * @desc Responsible for handling API requests for the /conversations route.
  **/
 @controller('/conversations', authMiddleware)
 export default class ConversationController {

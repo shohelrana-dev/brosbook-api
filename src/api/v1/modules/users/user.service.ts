@@ -7,20 +7,19 @@ import { CreateUserDTO } from '@modules/auth/auth.dto'
 import NotificationService from '@modules/notifications/notification.service'
 import MediaService from '@services/media.service'
 import { paginateMeta } from '@utils/paginateMeta'
-import { Auth, ListQueryParams, ListResponse, SearchQueryParams } from '@utils/types'
+import { Auth, ListQueryParams, SearchQueryParams } from '@utils/types'
 import fetch from 'cross-fetch'
 import { UploadedFile } from 'express-fileupload'
 import { TokenPayload } from 'google-auth-library'
 import { inject, injectable } from 'inversify'
 import isEmpty from 'is-empty'
-import { BadRequestException, InternalServerException, NotFoundException } from 'node-http-exceptions'
+import { BadRequestException, NotFoundException } from 'node-http-exceptions'
 import { Brackets, In } from 'typeorm'
 import { v4 as uuid } from 'uuid'
 
 /**
- * Service responsible for handling user operations such as creation, retrieval, and management.
- * This service uses a repository pattern to communicate with the underlying database.
- * It also depends on the MediaService and NotificationService to handle media and notification related tasks.
+ * @class UserService
+ * @desc Service responsible for handling user operations such as creation, retrieval, and management.
  */
 @injectable()
 export default class UserService {
@@ -28,12 +27,6 @@ export default class UserService {
     private readonly profileRepository = appDataSource.getRepository(Profile)
     private readonly mediaRepository = appDataSource.getRepository(Media)
 
-    /**
-     * Creates an instance of the UserService class.
-     *
-     * @param notificationService - The NotificationService object. Used for sending notifications to users.
-     * @param mediaService - The MediaService object. Used for handling media related tasks.
-     */
     constructor(
         @inject(NotificationService)
         private readonly notificationService: NotificationService,
@@ -41,14 +34,7 @@ export default class UserService {
         private readonly mediaService: MediaService
     ) {}
 
-    /**
-     * Creates a new user and returns the newly created user object.
-     *
-     * @param userData - The user data object containing the user's details.
-     * @returns A promise that resolves to the newly created user object.
-     * @throws BadRequestException if the user data is empty.
-     */
-    public async create(userData: CreateUserDTO): Promise<User> {
+    public async create(userData: CreateUserDTO) {
         if (isEmpty(userData)) throw new BadRequestException('User data is empty')
 
         let user = new User()
@@ -58,60 +44,36 @@ export default class UserService {
         user.username = userData.username
         user.password = userData.password
 
-        try {
-            await this.userRepository.save(user)
-            await this.profileRepository.create({ user }).save()
-            return user
-        } catch {
-            throw new InternalServerException('Failed to create user')
-        }
+        await this.userRepository.save(user)
+        await this.profileRepository.create({ user }).save()
+        return user
     }
 
-    /**
-     * Creates a new user using a Google token payload and returns the newly created user object.
-     *
-     * @param token - The Google token used to authenticate the user.
-     * @returns A promise that resolves to the newly created user object.
-     * @throws BadRequestException if the token is empty.
-     * @throws UnauthorizedException if the token is invalid.
-     * @throws InternalServerException if the user creation fails.
-     */
-    public async createWithGoogleOAuthTokenPayload(tokenPayload: TokenPayload): Promise<User> {
-        try {
-            //create user
-            const user = new User()
-            user.firstName = tokenPayload.given_name
-            user.lastName = tokenPayload.family_name || tokenPayload.given_name
-            user.fullName = `${user.firstName} ${user.lastName}`
-            user.email = tokenPayload.email
-            user.emailVerifiedAt = new Date(Date.now())
-            user.password = uuid()
-            await this.userRepository.save(user)
+    public async createWithGoogleOAuthTokenPayload(tokenPayload: TokenPayload) {
+        //create user
+        const user = new User()
+        user.firstName = tokenPayload.given_name
+        user.lastName = tokenPayload.family_name || tokenPayload.given_name
+        user.fullName = `${user.firstName} ${user.lastName}`
+        user.email = tokenPayload.email
+        user.emailVerifiedAt = new Date(Date.now())
+        user.password = uuid()
+        await this.userRepository.save(user)
 
-            await this.profileRepository.create({ user }).save()
+        await this.profileRepository.create({ user }).save()
 
-            //save photo
-            user.avatar = await this.mediaService.save({
-                file: Buffer.from(await (await fetch(tokenPayload.picture)).arrayBuffer()),
-                source: MediaSource.AVATAR,
-                creator: { id: user.id } as User,
-            })
+        //save photo
+        user.avatar = await this.mediaService.save({
+            file: Buffer.from(await (await fetch(tokenPayload.picture)).arrayBuffer()),
+            source: MediaSource.AVATAR,
+            creator: { id: user.id } as User,
+        })
 
-            await this.userRepository.save(user)
+        await this.userRepository.save(user)
 
-            return user
-        } catch {
-            throw new InternalServerException('Failed to create user')
-        }
+        return user
     }
 
-    /**
-     * Fetches the current user.
-     *
-     * @param {Auth} auth - An object containing the user's authentication information.
-     * @returns {Promise<User>} The current user object.
-     * @throws {NotFoundException} When the user is not found in the database.
-     */
     public async getCurrentUser(auth: Auth) {
         try {
             return await this.userRepository.findOneOrFail({
@@ -123,16 +85,7 @@ export default class UserService {
         }
     }
 
-    /**
-     * Fetches a user by its user ID with its profile information.
-     *
-     * @param {string} userId - The ID of the user to fetch.
-     * @param {Auth} auth - An object containing the user's authentication information.
-     * @returns {Promise<User>} The user with the given user ID with its profile information.
-     * @throws {BadRequestException} When the user ID is empty.
-     * @throws {NotFoundException} When the user is not found in the database.
-     */
-    public async getById(userId: string, auth: Auth): Promise<User> {
+    public async getById(userId: string, auth: Auth) {
         if (!userId) throw new BadRequestException('User id is empty')
 
         try {
@@ -146,16 +99,7 @@ export default class UserService {
         }
     }
 
-    /**
-     * Fetches a user by its username with its profile information.
-     *
-     * @param {string} username - The username of the user to fetch.
-     * @param {Auth} auth - An object containing the user's authentication information.
-     * @returns {Promise<User>} The user with the given username with its profile information.
-     * @throws {BadRequestException} When the username is empty.
-     * @throws {NotFoundException} When the user is not found in the database.
-     */
-    public async getByUsername(username: string, auth: Auth): Promise<User> {
+    public async getByUsername(username: string, auth: Auth) {
         if (!username) throw new BadRequestException('Username is empty')
 
         try {
@@ -170,63 +114,29 @@ export default class UserService {
         }
     }
 
-    /**
-     * get the count of the followers of a user with the given user ID.
-     *
-     * @param {string} userId - The ID of the user to fetch the followers count.
-     * @returns {Promise<number>} The count of the followers of the user with the given user ID.
-     * @throws {BadRequestException} When the user ID is empty.
-     */
-    public async getFollowersCount(userId: string): Promise<number> {
+    public async getFollowersCount(userId: string) {
         if (!userId) throw new BadRequestException('User id is empty')
 
         //followers count
-        try {
-            return await this.userRepository
-                .createQueryBuilder('user')
-                .leftJoin('user.followings', 'following')
-                .where('following.id = :followingId', { followingId: userId })
-                .getCount()
-        } catch {
-            throw new InternalServerException('Failed to fetch followers count')
-        }
+        return await this.userRepository
+            .createQueryBuilder('user')
+            .leftJoin('user.followings', 'following')
+            .where('following.id = :followingId', { followingId: userId })
+            .getCount()
     }
 
-    /**
-     * Get the number of users a particular user is following
-     *
-     * @param {string} userId - The user id
-     * @returns {Promise<number>} The number of users the user is following
-     * @throws {BadRequestException} if user id is empty
-     */
-    public async getFollowingsCount(userId: string): Promise<number> {
+    public async getFollowingsCount(userId: string) {
         if (!userId) throw new BadRequestException('User id is empty')
 
         //followings count
-        try {
-            return await this.userRepository
-                .createQueryBuilder('user')
-                .leftJoin('user.followers', 'follower')
-                .where('follower.id = :followerId', { followerId: userId })
-                .getCount()
-        } catch {
-            throw new InternalServerException('Failed to fetch followings count')
-        }
+        return await this.userRepository
+            .createQueryBuilder('user')
+            .leftJoin('user.followers', 'follower')
+            .where('follower.id = :followerId', { followerId: userId })
+            .getCount()
     }
 
-    /**
-     * Get the list of media belonging to a particular user
-     *
-     * @param {string} userId - The user id
-     * @param {ListQueryParams} params - List query parameters (page and limit)
-     * @returns {Promise<ListResponse<Media>>} The list of media belonging to the user
-     * @throws {BadRequestException} if user id is empty
-     * @throws {NotFoundException} if user does not exist
-     */
-    public async getUserMediaList(
-        userId: string,
-        params: ListQueryParams
-    ): Promise<ListResponse<Media>> {
+    public async getUserMediaList(userId: string, params: ListQueryParams) {
         const { page, limit } = params
         const skip = limit * (page - 1)
 
@@ -236,67 +146,45 @@ export default class UserService {
 
         if (!user) throw new NotFoundException('User does not exists')
 
-        try {
-            const [media, count] = await this.mediaRepository.findAndCount({
-                where: {
-                    creator: { id: user.id },
-                    source: In([MediaSource.AVATAR, MediaSource.COVER_PHOTO, MediaSource.POST]),
-                },
-                order: { createdAt: 'DESC' },
-                skip: skip,
-                take: limit,
-            })
+        const [media, count] = await this.mediaRepository.findAndCount({
+            where: {
+                creator: { id: user.id },
+                source: In([MediaSource.AVATAR, MediaSource.COVER_PHOTO, MediaSource.POST]),
+            },
+            order: { createdAt: 'DESC' },
+            skip: skip,
+            take: limit,
+        })
 
-            return { items: media, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch user media list')
-        }
+        return { items: media, ...paginateMeta(count, page, limit) }
     }
 
-    /**
-     * Search for users based on a query string
-     *
-     * @param {SearchQueryParams} params - Search query parameters (q, page and limit)
-     * @param {Auth} auth - The authenticated user object
-     * @returns {Promise<ListResponse<User>>} The list of users matching the search query
-     */
-    public async search(params: SearchQueryParams, auth: Auth): Promise<ListResponse<User>> {
+    public async search(params: SearchQueryParams, auth: Auth) {
         const { q, page, limit } = params
         const skip = limit * (page - 1)
 
-        try {
-            const [users, count] = await this.userRepository
-                .createQueryBuilder('user')
-                .leftJoinAndSelect('user.avatar', 'avatar')
-                .where('user.id != :userId', { userId: String(auth.user?.id) })
-                .andWhere(
-                    new Brackets((qb) => {
-                        qb.where('user.firstName iLIKE :q', { q: `%${q}%` })
-                        qb.orWhere('user.lastName iLIKE :q', { q: `%${q}%` })
-                        qb.orWhere('user.username iLIKE :q', { q: `%${q}%` })
-                    })
-                )
-                .orderBy('user.createdAt', 'DESC')
-                .skip(skip)
-                .take(limit)
-                .getManyAndCount()
+        const [users, count] = await this.userRepository
+            .createQueryBuilder('user')
+            .leftJoinAndSelect('user.avatar', 'avatar')
+            .where('user.id != :userId', { userId: String(auth.user?.id) })
+            .andWhere(
+                new Brackets((qb) => {
+                    qb.where('user.firstName iLIKE :q', { q: `%${q}%` })
+                    qb.orWhere('user.lastName iLIKE :q', { q: `%${q}%` })
+                    qb.orWhere('user.username iLIKE :q', { q: `%${q}%` })
+                })
+            )
+            .orderBy('user.createdAt', 'DESC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount()
 
-            await this.formatUsers(users, auth)
+        await this.formatUsers(users, auth)
 
-            return { items: users, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to search for users.')
-        }
+        return { items: users, ...paginateMeta(count, page, limit) }
     }
 
-    /**
-     * Retrieves a list of suggested users for the current user to follow.
-     *
-     * @param {ListQueryParams} params - The pagination parameters.
-     * @param {Auth} auth - The user authentication object.
-     * @return {Promise<ListResponse<User>>} - The list of suggested users and pagination metadata.
-     */
-    public async getSuggestions(params: ListQueryParams, auth: Auth): Promise<ListResponse<User>> {
+    public async getSuggestions(params: ListQueryParams, auth: Auth) {
         const { page, limit } = params
         const skip = limit * (page - 1)
 
@@ -308,137 +196,81 @@ export default class UserService {
         const followingIds = !isEmpty(user.followings) ? user.followings.map((user) => user.id) : ['']
 
         // Retrieve users not followed by the current user
-        try {
-            const [users, count] = await this.userRepository
-                .createQueryBuilder('user')
-                .leftJoinAndSelect('user.avatar', 'avatar')
-                .leftJoinAndSelect('user.profile', 'profile')
-                .where('user.id != :userId', { userId: auth.user.id })
-                .andWhere('user.id NOT IN (:...followingIds)', { followingIds })
-                .orderBy('user.createdAt', 'DESC')
-                .skip(skip)
-                .take(limit)
-                .getManyAndCount()
+        const [users, count] = await this.userRepository
+            .createQueryBuilder('user')
+            .leftJoinAndSelect('user.avatar', 'avatar')
+            .leftJoinAndSelect('user.profile', 'profile')
+            .where('user.id != :userId', { userId: auth.user.id })
+            .andWhere('user.id NOT IN (:...followingIds)', { followingIds })
+            .orderBy('user.createdAt', 'DESC')
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount()
 
-            await this.formatUsers(users, auth)
+        await this.formatUsers(users, auth)
 
-            return { items: users, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch suggestions.')
-        }
+        return { items: users, ...paginateMeta(count, page, limit) }
     }
 
-    /**
-     * Retrieves a list of followers for a given user.
-     *
-     * @param {string} userId - The ID of the user to retrieve followers for.
-     * @param {ListQueryParams} params - The pagination parameters.
-     * @param {Auth} auth - The user authentication object.
-     * @return {Promise<ListResponse<User>>} - The list of followers and pagination metadata.
-     */
-    public async getFollowers(
-        userId: string,
-        params: ListQueryParams,
-        auth: Auth
-    ): Promise<ListResponse<User>> {
+    public async getFollowers(userId: string, params: ListQueryParams, auth: Auth) {
         if (!userId) throw new BadRequestException('User id is empty')
 
         const { page, limit } = params
         const skip = limit * (page - 1)
 
-        try {
-            const [followers, count] = await this.userRepository
-                .createQueryBuilder('user')
-                .leftJoin('user.followings', 'following')
-                .leftJoinAndSelect('user.avatar', 'avatar')
-                .leftJoinAndSelect('user.profile', 'profile')
-                .where('following.id = :userId', { userId })
-                .skip(skip)
-                .take(limit)
-                .getManyAndCount()
+        const [followers, count] = await this.userRepository
+            .createQueryBuilder('user')
+            .leftJoin('user.followings', 'following')
+            .leftJoinAndSelect('user.avatar', 'avatar')
+            .leftJoinAndSelect('user.profile', 'profile')
+            .where('following.id = :userId', { userId })
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount()
 
-            await this.formatUsers(followers, auth)
+        await this.formatUsers(followers, auth)
 
-            return { items: followers, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch followers.')
-        }
+        return { items: followers, ...paginateMeta(count, page, limit) }
     }
 
-    /**
-     * Retrieves a list of followings for a given user.
-     *
-     * @param {string} userId - The ID of the user to retrieve followings for.
-     * @param {ListQueryParams} params - The pagination parameters.
-     * @param {Auth} auth - The user authentication object.
-     * @return {Promise<ListResponse<User>>} - The list of followings and pagination metadata.
-     */
-    public async getFollowings(
-        userId: string,
-        params: ListQueryParams,
-        auth: Auth
-    ): Promise<ListResponse<User>> {
+    public async getFollowings(userId: string, params: ListQueryParams, auth: Auth) {
         if (!userId) throw new BadRequestException('User id is empty')
 
         const { page, limit } = params
         const skip = limit * (page - 1)
 
-        try {
-            const [followings, count] = await this.userRepository
-                .createQueryBuilder('user')
-                .leftJoin('user.followers', 'follower')
-                .leftJoinAndSelect('user.avatar', 'avatar')
-                .leftJoinAndSelect('user.profile', 'profile')
-                .where('follower.id = :userId', { userId })
-                .skip(skip)
-                .take(limit)
-                .getManyAndCount()
+        const [followings, count] = await this.userRepository
+            .createQueryBuilder('user')
+            .leftJoin('user.followers', 'follower')
+            .leftJoinAndSelect('user.avatar', 'avatar')
+            .leftJoinAndSelect('user.profile', 'profile')
+            .where('follower.id = :userId', { userId })
+            .skip(skip)
+            .take(limit)
+            .getManyAndCount()
 
-            await this.formatUsers(followings, auth)
+        await this.formatUsers(followings, auth)
 
-            return { items: followings, ...paginateMeta(count, page, limit) }
-        } catch {
-            throw new InternalServerException('Failed to fetch followings.')
-        }
+        return { items: followings, ...paginateMeta(count, page, limit) }
     }
 
-    /**
-     * Changes the avatar of a user.
-     *
-     * @param {UploadedFile} avatar - The new avatar image file.
-     * @param {Auth} auth - The authentication information for the user.
-     * @returns {Promise<User>} The updated user object.
-     * @throws {BadRequestException} if the avatar is empty.
-     */
-    public async changeAvatar(avatar: UploadedFile, auth: Auth): Promise<User> {
+    public async changeAvatar(avatar: UploadedFile, auth: Auth) {
         if (!avatar) throw new BadRequestException('Avatar is empty')
 
         const user = await this.userRepository.findOneBy({ id: auth.user.id })
 
         if (!user) throw new BadRequestException('User does not exists')
 
-        try {
-            user.avatar = await this.mediaService.save({
-                file: avatar.data,
-                creator: auth.user,
-                source: MediaSource.AVATAR,
-            })
+        user.avatar = await this.mediaService.save({
+            file: avatar.data,
+            creator: auth.user,
+            source: MediaSource.AVATAR,
+        })
 
-            return await this.userRepository.save(user)
-        } catch {
-            throw new InternalServerException('Failed to change avatar.')
-        }
+        return await this.userRepository.save(user)
     }
 
-    /**
-     * Changes the cover photo of a user's profile.
-     *
-     * @param {UploadedFile} coverPhoto - The new cover photo image file.
-     * @param {Auth} auth - The authentication information for the user.
-     * @returns {Promise<User>} The updated user object.
-     * @throws {BadRequestException} if the cover photo is empty, or if the user or profile does not exist.
-     */
-    public async changeCoverPhoto(coverPhoto: UploadedFile, auth: Auth): Promise<User> {
+    public async changeCoverPhoto(coverPhoto: UploadedFile, auth: Auth) {
         if (!coverPhoto) throw new BadRequestException('Cover photo is empty')
 
         const user = await this.userRepository.findOneBy({ id: auth.user.id })
@@ -446,31 +278,18 @@ export default class UserService {
 
         if (!user || !profile) throw new BadRequestException('User does not exists')
 
-        try {
-            profile.coverPhoto = await this.mediaService.save({
-                file: coverPhoto.data,
-                creator: auth.user,
-                source: MediaSource.COVER_PHOTO,
-            })
-            await this.profileRepository.save(profile)
-            user.profile = profile
+        profile.coverPhoto = await this.mediaService.save({
+            file: coverPhoto.data,
+            creator: auth.user,
+            source: MediaSource.COVER_PHOTO,
+        })
+        await this.profileRepository.save(profile)
+        user.profile = profile
 
-            return user
-        } catch {
-            throw new InternalServerException('Failed to change cover photo.')
-        }
+        return user
     }
 
-    /**
-     * Follows a target user.
-     *
-     * @param {string} targetUserId - The ID of the user to follow.
-     * @param {Auth} auth - The authentication information for the user.
-     * @returns {Promise<User>} The target user object with updated follower information.
-     * @throws {BadRequestException} if the target user ID is empty or does not exist, or if the user is already following the target user.
-     * @throws {InternalServerException} if the database operation fails.
-     */
-    public async follow(targetUserId: string, auth: Auth): Promise<User> {
+    public async follow(targetUserId: string, auth: Auth) {
         if (!targetUserId) throw new BadRequestException('Target user id is empty')
 
         const targetUser = await this.userRepository.findOneBy({ id: targetUserId })
@@ -487,12 +306,8 @@ export default class UserService {
 
         if (findTheUserFromFollowing) throw new BadRequestException('You already followed the user')
 
-        try {
-            targetUser.followers = [auth.user as User]
-            await this.userRepository.save(targetUser)
-        } catch (e) {
-            throw new InternalServerException('Failed to follow the user')
-        }
+        targetUser.followers = [auth.user as User]
+        await this.userRepository.save(targetUser)
 
         targetUser.isViewerFollow = true
 
@@ -507,31 +322,18 @@ export default class UserService {
         return targetUser
     }
 
-    /**
-     * Unfollows a target user.
-     *
-     * @param {string} targetUserId - The ID of the user to unfollow.
-     * @param {Auth} auth - The authentication information for the user.
-     * @returns {Promise<User>} The target user object with updated follower information.
-     * @throws {BadRequestException} if the target user ID is empty or does not exist.
-     * @throws {InternalServerException} if the database operation fails.
-     */
-    public async unfollow(targetUserId: string, auth: Auth): Promise<User> {
+    public async unfollow(targetUserId: string, auth: Auth) {
         if (!targetUserId) throw new BadRequestException('Target user id is empty')
 
         const targetUser = await this.userRepository.findOneBy({ id: targetUserId })
 
         if (!targetUser) throw new BadRequestException('Target user does not exists')
 
-        try {
-            await this.userRepository
-                .createQueryBuilder()
-                .relation(User, 'followings')
-                .of(auth.user.id)
-                .remove(targetUserId)
-        } catch (e) {
-            throw new InternalServerException('Failed to unfollow the user.')
-        }
+        await this.userRepository
+            .createQueryBuilder()
+            .relation(User, 'followings')
+            .of(auth.user.id)
+            .remove(targetUserId)
 
         targetUser.isViewerFollow = false
 
@@ -543,14 +345,7 @@ export default class UserService {
         return targetUser
     }
 
-    /**
-     * Makes a user active.
-     *
-     * @param {string} userId - The ID of the user to make active.
-     * @returns {Promise<User>} The updated user object.
-     * @throws {BadRequestException} if the user ID is empty or does not exist.
-     */
-    public async makeUserActive(userId: string): Promise<User> {
+    public async makeUserActive(userId: string) {
         if (!userId) throw new BadRequestException('User id is empty')
 
         const user = await this.userRepository.findOneBy({ id: userId })
@@ -559,21 +354,10 @@ export default class UserService {
 
         user.active = true
 
-        try {
-            return await this.userRepository.save(user)
-        } catch {
-            throw new InternalServerException('Faild to make user active.')
-        }
+        return await this.userRepository.save(user)
     }
 
-    /**
-     * Makes a user inactive.
-     *
-     * @param {string} userId - The ID of the user to make inactive.
-     * @returns {Promise<User>} The updated user object.
-     * @throws {BadRequestException} if the user ID is empty or does not exist.
-     */
-    public async makeUserInactive(userId: string): Promise<User> {
+    public async makeUserInactive(userId: string) {
         if (!userId) throw new BadRequestException('User id is empty')
 
         const user = await this.userRepository.findOneBy({ id: userId })
@@ -582,34 +366,16 @@ export default class UserService {
 
         user.active = false
 
-        try {
-            return await this.userRepository.save(user)
-        } catch {
-            throw new InternalServerException('Faild to make user inactive.')
-        }
+        return await this.userRepository.save(user)
     }
 
-    /**
-     * Formats a user object with additional information.
-     *
-     * @param {User} user - The user object to format.
-     * @param {Auth} auth - The authentication information for the current user.
-     * @returns {Promise<User>} The formatted user object.
-     */
-    async formatUser(user: User, auth: Auth): Promise<User> {
+    public async formatUser(user: User, auth: Auth) {
         user.isViewerFollow = await this.isCurrentUserFollow(user, auth)
 
         return user
     }
 
-    /**
-     * Formats an array of user objects with additional information.
-     *
-     * @param {User[]} users - The array of user objects to format.
-     * @param {Auth} auth - The authentication information for the current user.
-     * @returns {Promise<User[]>} The formatted array of user objects.
-     */
-    async formatUsers(users: User[], auth: Auth): Promise<User[]> {
+    public async formatUsers(users: User[], auth: Auth) {
         for (const user of users) {
             await this.formatUser(user, auth)
         }
@@ -617,14 +383,7 @@ export default class UserService {
         return users
     }
 
-    /**
-     * Checks if the current user is following a specified user.
-     *
-     * @param {User} followUser - The user being followed.
-     * @param {Auth} auth - The authentication object for the current user.
-     * @returns {Promise<boolean>} A Promise that resolves to true if the current user is following the specified user; otherwise, false.
-     */
-    async isCurrentUserFollow(followUser: User, auth: Auth): Promise<boolean> {
+    public async isCurrentUserFollow(followUser: User, auth: Auth) {
         if (!auth.isAuthenticated) return false
 
         // Count the number of followings records that match the current user ID and follow user ID
