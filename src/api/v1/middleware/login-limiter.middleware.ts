@@ -1,6 +1,6 @@
 import { NextFunction, Request } from 'express'
 import rateLimit, { Options } from 'express-rate-limit'
-import { httpStatus } from 'node-http-exceptions'
+import { TooManyRequestException, httpStatus } from 'node-http-exceptions'
 
 const loginLimiterMiddleware = rateLimit({
     windowMs: 60 * 1000, // 1 minute
@@ -14,7 +14,7 @@ const loginLimiterMiddleware = rateLimit({
             `Too Many Requests: ${options.message.message}\t${req.method}\t${req.url}\t${req.headers.origin}`,
             'errLog.log'
         )
-        res.status(options.statusCode).send(options.message)
+        throw new TooManyRequestException(options.message.message)
     },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers

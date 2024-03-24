@@ -39,7 +39,7 @@
         "jsonwebtoken": "^8.5.1",
         "mysql": "^2.18.1",
         "nanoid": "3.3.4",
-        "node-http-exceptions": "^1.0.3",
+        "node-http-exceptions": "^1.1.0",
         "nodemailer": "^6.7.2",
         "nodemailer-smtp-transport": "^2.7.4",
         "pg": "^8.10.0",
