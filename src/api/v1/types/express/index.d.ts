@@ -5,6 +5,7 @@ declare namespace Express {
                 id: string
                 email: string
                 username: string
+                avatar: { url: string }
             }
             isAuthenticated: boolean
             isTokenExpired: boolean

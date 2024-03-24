@@ -31,7 +31,7 @@ export default class AuthService {
         private readonly userService: UserService
     ) {}
 
-    public async signup(userData: CreateUserDTO): Promise<User> {
+    public async signup(userData: CreateUserDTO) {
         if (isEmpty(userData)) throw new BadRequestException('Signup user data is empty.')
 
         const user = await this.userService.create(userData)
@@ -39,9 +39,7 @@ export default class AuthService {
         return user
     }
 
-    public async login(
-        userData: LoginUserDTO
-    ): Promise<AuthToken & { user: User; refreshToken: string }> {
+    public async login(userData: LoginUserDTO) {
         if (isEmpty(userData)) throw new BadRequestException('Login user data is empty.')
 
         const { username, password } = userData
@@ -72,9 +70,7 @@ export default class AuthService {
         return { user, ...accessTokenData, refreshToken }
     }
 
-    public async loginWithGoogle(
-        token: string
-    ): Promise<AuthToken & { user: User; refreshToken: string }> {
+    public async loginWithGoogle(token: string) {
         const tokenPayload = await verifyGoogleOAuthToken(token)
 
         let user = await this.userRepository.findOneBy({ email: tokenPayload.email })
@@ -96,7 +92,7 @@ export default class AuthService {
         return { user, ...accessTokenData, refreshToken }
     }
 
-    public async refreshToken(refreshToken: string): Promise<AuthToken> {
+    public async refreshToken(refreshToken: string) {
         if (!refreshToken) throw new ForbiddenException('Refresh token is empty.')
 
         try {
@@ -203,6 +199,7 @@ export default class AuthService {
             id: user.id,
             username: user.username,
             email: user.email,
+            avatar: { url: user.avatar.url },
             type: 'access',
         }
         const accessTokenSecret = process.env['ACCESS_TOKEN_SECRET']
