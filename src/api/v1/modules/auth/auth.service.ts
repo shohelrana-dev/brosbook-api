@@ -32,7 +32,7 @@ export default class AuthService {
     ) {}
 
     public async signup(userData: CreateUserDTO) {
-        if (isEmpty(userData)) throw new BadRequestException('Signup user data is empty.')
+        if (isEmpty(userData)) throw new BadRequestException('Signup user data is empty')
 
         const user = await this.userService.create(userData)
         await EmailService.sendEmailVerificationLink(userData.email, user.username)
@@ -40,7 +40,7 @@ export default class AuthService {
     }
 
     public async login(userData: LoginUserDTO) {
-        if (isEmpty(userData)) throw new BadRequestException('Login user data is empty.')
+        if (isEmpty(userData)) throw new BadRequestException('Login user data is empty')
 
         const { username, password } = userData
 
@@ -49,11 +49,11 @@ export default class AuthService {
             select: selectAllColumns(this.userRepository),
         })
 
-        if (!user) throw new BadRequestException('User not found with the email or username.')
+        if (!user) throw new BadRequestException('User not found with the email or username')
 
         const isPasswordMatched = await argon2.verify(user.password, password)
 
-        if (!isPasswordMatched) throw new BadRequestException('Invalid password.')
+        if (!isPasswordMatched) throw new BadRequestException('Invalid password')
 
         delete user.password
 
@@ -93,7 +93,7 @@ export default class AuthService {
     }
 
     public async refreshToken(refreshToken: string) {
-        if (!refreshToken) throw new ForbiddenException('Refresh token is empty.')
+        if (!refreshToken) throw new ForbiddenException('Refresh token is empty')
 
         try {
             const tokenPayload = jwt.verify(
@@ -102,20 +102,20 @@ export default class AuthService {
             ) as JwtPayload
 
             if (tokenPayload.type !== 'refresh') {
-                throw new BadRequestException('Invalid refreshToken.')
+                throw new BadRequestException('Invalid refreshToken')
             }
 
             try {
                 const user = await this.userRepository.findOneByOrFail({ id: tokenPayload.id })
                 return AuthService.createAccessToken(user)
             } catch {
-                throw new NotFoundException('User not found with the token payload.')
+                throw new NotFoundException('User not found with the token payload')
             }
         } catch (err) {
             if (err instanceof TokenExpiredError) {
-                throw new ForbiddenException('Token has been expired.')
+                throw new ForbiddenException('Token has been expired')
             } else if (err instanceof JsonWebTokenError) {
-                throw new ForbiddenException('Invalid token.')
+                throw new ForbiddenException('Invalid token')
             }
             throw err
         }
@@ -124,14 +124,14 @@ export default class AuthService {
     public async forgotPassword(email: string) {
         const user = await this.userRepository.findOneBy({ email })
 
-        if (!user) throw new BadRequestException('User not found with the email.')
+        if (!user) throw new BadRequestException('User not found with the email')
 
         try {
             await EmailService.sendResetPasswordLink(email)
 
             return user
         } catch {
-            throw new InternalServerException('Failed to send password reset email.')
+            throw new InternalServerException('Failed to send password reset email')
         }
     }
 
@@ -143,12 +143,12 @@ export default class AuthService {
             const decoded = jwt.verify(token, process.env['ACCESS_TOKEN_SECRET']) as any
             email = decoded.email
         } catch (e) {
-            throw new BadRequestException('Token is invalid.')
+            throw new BadRequestException('Token is invalid')
         }
 
         let user = await this.userRepository.findOneBy({ email: email })
 
-        if (!user) throw new BadRequestException('User does not exists.')
+        if (!user) throw new BadRequestException('User does not exists')
 
         user.password = await argon2.hash(password)
         user = await this.userRepository.save(user)
@@ -164,12 +164,12 @@ export default class AuthService {
             const payload = jwt.verify(token, process.env['ACCESS_TOKEN_SECRET']) as any
             email = payload.email
         } catch {
-            throw new BadRequestException('Invalid token.')
+            throw new BadRequestException('Invalid token')
         }
 
         let user = await this.userRepository.findOneBy({ email })
 
-        if (!user) throw new BadRequestException('User does not exists.')
+        if (!user) throw new BadRequestException('User does not exists')
 
         if (user.hasEmailVerified) {
             throw new BadRequestException('Your email address already verified')
@@ -185,12 +185,14 @@ export default class AuthService {
     public async resendEmailVerificationLink(email: string) {
         const user = await this.userRepository.findOneBy({ email })
 
-        if (!user) throw new BadRequestException('User does not exists.')
+        if (!user) throw new BadRequestException('User does not exists')
+
+        if (user.hasEmailVerified) throw new BadRequestException('Your email address already verified')
 
         try {
             await EmailService.sendEmailVerificationLink(user.email, user.username)
         } catch {
-            throw new InternalServerException('Failed to resend email verification link.')
+            throw new InternalServerException('Failed to resend email verification link')
         }
     }
 
