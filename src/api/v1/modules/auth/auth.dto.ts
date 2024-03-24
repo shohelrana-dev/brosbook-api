@@ -28,8 +28,8 @@ export class CreateUserDTO {
     @Matches(/^[a-zA-Z0-9_.-]+$/, {
         message: 'Username must contain letters, numbers, underscore, dash, and dot',
     })
-    @MaxLength(20, { message: 'First name must be less than 20 characters' })
-    @MinLength(5, { message: 'Username must be more than 5 characters' })
+    @MaxLength(20, { message: 'Username must be less than 20 characters' })
+    @MinLength(5, { message: 'Username must be minimum 5 characters' })
     @IsNotEmpty({ message: 'Please enter a username' })
     username: string
 

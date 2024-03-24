@@ -12,7 +12,7 @@ const dtoValidationMiddleware =
 
         if (errors.length > 0) {
             return next(
-                new UnprocessableEntityException('Please provide all required fields.', {
+                new UnprocessableEntityException('Please fix all validation errors.', {
                     errors: mapErrors(errors),
                 })
             )
