@@ -9,7 +9,6 @@ import {
     IsEmail,
     IsNotEmpty,
     IsStrongPassword,
-    Length,
     Matches,
     MaxLength,
     MinLength,
@@ -29,7 +28,8 @@ export class CreateUserDTO {
     @Matches(/^[a-zA-Z0-9_.-]+$/, {
         message: 'Username must contain letters, numbers, underscore, dash, and dot',
     })
-    @Length(5, 20, { message: 'Username must be between 5 and 20 characters' })
+    @MaxLength(20, { message: 'First name must be less than 20 characters' })
+    @MinLength(5, { message: 'Username must be more than 5 characters' })
     @IsNotEmpty({ message: 'Please enter a username' })
     username: string
 
@@ -58,11 +58,11 @@ export class CreateUserDTO {
 
 export class LoginUserDTO {
     @Validate(IsUsernameOrEmailNotExist)
-    @IsNotEmpty({ message: 'Please enter your login username or email' })
+    @IsNotEmpty({ message: 'Please enter your username or email' })
     username: string
 
     @Validate(IsPasswordValid)
-    @IsNotEmpty({ message: 'Please enter your login password' })
+    @IsNotEmpty({ message: 'Please enter your password' })
     password: string
 }
 

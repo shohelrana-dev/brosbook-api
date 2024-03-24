@@ -1,17 +1,23 @@
+import mapErrors from '@utils/mapErrors'
+import { plainToInstance } from 'class-transformer'
+import { validate } from 'class-validator'
 import { RequestHandler } from 'express'
-import { validate } from "class-validator"
-import { plainToInstance } from "class-transformer"
-import { UnprocessableEntityException } from "node-http-exceptions"
-import mapErrors from "@utils/mapErrors"
+import { UnprocessableEntityException } from 'node-http-exceptions'
 
-const dtoValidationMiddleware = ( type: any, skipMissingProperties = false ): RequestHandler => async( req, res, next ) => {
-    const dtoObj = plainToInstance( type, req.body )
-    const errors = await validate( dtoObj, { skipMissingProperties } )
+const dtoValidationMiddleware =
+    (type: any, skipMissingProperties = false): RequestHandler =>
+    async (req, res, next) => {
+        const dtoObj = plainToInstance(type, req.body)
+        const errors = await validate(dtoObj, { skipMissingProperties })
 
-    if( errors.length > 0 ){
-        return next( new UnprocessableEntityException( 'Please fix errors below.', { errors: mapErrors( errors ) } ) )
+        if (errors.length > 0) {
+            return next(
+                new UnprocessableEntityException('Please enter all required fields.', {
+                    errors: mapErrors(errors),
+                })
+            )
+        }
+        next()
     }
-    next()
-}
 
 export default dtoValidationMiddleware
