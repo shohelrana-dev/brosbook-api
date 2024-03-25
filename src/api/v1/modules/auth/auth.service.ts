@@ -13,6 +13,7 @@ import User from '@entities/User'
 import { CreateUserDTO, LoginUserDTO, ResetPasswordDTO } from '@modules/auth/auth.dto'
 import UserService from '@modules/users/user.service'
 import { EmailService } from '@services/email.service'
+import { EMAIL_SECRET_KEY } from '@utils/constants'
 import { selectAllColumns } from '@utils/selectAllColumns'
 import { AuthToken } from '@utils/types'
 import verifyGoogleOAuthToken from '@utils/verifyGoogleOAuthToken'
@@ -35,7 +36,7 @@ export default class AuthService {
         if (isEmpty(userData)) throw new BadRequestException('Signup user data is empty')
 
         const user = await this.userService.create(userData)
-        await EmailService.sendEmailVerificationLink(userData.email, user.username)
+        await EmailService.sendEmailVerificationLink({ email: userData.email, username: user.username })
         return user
     }
 
@@ -135,12 +136,12 @@ export default class AuthService {
         }
     }
 
-    public async resetPassword(payload: ResetPasswordDTO) {
-        const { password, token } = payload
+    public async resetPassword({ password, token }: ResetPasswordDTO) {
+        if (!password || !token) throw new BadRequestException('Password or token is empty')
         let email = null
 
         try {
-            const decoded = jwt.verify(token, process.env['ACCESS_TOKEN_SECRET']) as any
+            const decoded = jwt.verify(token, EMAIL_SECRET_KEY) as JwtPayload
             email = decoded.email
         } catch (e) {
             throw new BadRequestException('Token is invalid')
@@ -161,7 +162,7 @@ export default class AuthService {
         let email = null
 
         try {
-            const payload = jwt.verify(token, process.env['ACCESS_TOKEN_SECRET']) as any
+            const payload = jwt.verify(token, EMAIL_SECRET_KEY) as JwtPayload
             email = payload.email
         } catch {
             throw new BadRequestException('Invalid token')
@@ -190,7 +191,7 @@ export default class AuthService {
         if (user.hasEmailVerified) throw new BadRequestException('Your email address already verified')
 
         try {
-            await EmailService.sendEmailVerificationLink(user.email, user.username)
+            await EmailService.sendEmailVerificationLink({ email: user.email, username: user.username })
         } catch {
             throw new InternalServerException('Failed to resend email verification link')
         }

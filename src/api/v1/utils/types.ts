@@ -60,3 +60,8 @@ export interface NotificationPayload {
     comment?: Comment
     type: NotificationTypes
 }
+
+export interface SendVerficationLinkPayload {
+    email: string
+    username: string
+}
